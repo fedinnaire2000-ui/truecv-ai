@@ -1,0 +1,1074 @@
+import React, { useState, useMemo, useRef } from "react";
+import {
+  FileText, Upload, ArrowRight, Check, X, AlertTriangle, ChevronDown,
+  ChevronRight, Download, Sparkles, Lock, User, Mail, Eye, EyeOff,
+  BarChart3, Briefcase, GraduationCap, PenLine, Globe, Menu, ArrowLeft,
+  Star, Clock, Layers, ShieldCheck, LogOut, Plus, FolderOpen
+} from "lucide-react";
+
+/* ============================== TOKENS ============================== */
+const C = {
+  bg: "#FBFCFE",
+  surface: "#FFFFFF",
+  ink: "#101826",
+  inkSoft: "#4C5568",
+  inkFaint: "#8891A3",
+  accent: "#2E5AAC",
+  accentDeep: "#1F4283",
+  accentSoft: "#EAF1FF",
+  line: "#E3E8F1",
+  navy: "#0B1830",
+  navySoft: "#16233F",
+  success: "#0F9960",
+  successBg: "#E8F8EF",
+  warning: "#B4740E",
+  warningBg: "#FDF3E0",
+  danger: "#C23934",
+  dangerBg: "#FCEAE9",
+};
+
+const FONTS = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+.tc-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background: ${C.bg}; color: ${C.ink}; }
+.tc-serif { font-family: 'Fraunces', ui-serif, Georgia, serif; }
+.tc-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+@keyframes tc-scan { 0% { transform: translateY(0); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { transform: translateY(220px); opacity: 0; } }
+@keyframes tc-fadeup { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes tc-pulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+.tc-fadeup { animation: tc-fadeup .5s ease both; }
+.tc-scanline { animation: tc-scan 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .tc-scanline { animation: none; }
+  .tc-fadeup { animation: none; }
+}
+.tc-underline-good { text-decoration: underline; text-decoration-color: ${C.success}; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.tc-strike-bad { text-decoration: line-through; text-decoration-color: ${C.danger}; text-decoration-thickness: 2px; color: ${C.inkFaint}; }
+.tc-insert { background: ${C.successBg}; color: ${C.success}; padding: 0 4px; border-radius: 3px; }
+.tc-scrollbar::-webkit-scrollbar { width: 6px; }
+.tc-scrollbar::-webkit-scrollbar-thumb { background: ${C.line}; border-radius: 4px; }
+input:focus, textarea:focus, button:focus-visible, select:focus { outline: 2px solid ${C.accent}; outline-offset: 2px; }
+`;
+
+/* ============================== MOCK ENGINE ============================== */
+const STOP = new Set(["the","and","a","an","to","of","in","for","with","on","is","are","as","by","at","or","be","this","that","from","your","you","we","our","will","have","has","it","its"]);
+
+function tokenize(text) {
+  return (text || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9À-ÿ\u0600-\u06FF\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP.has(w));
+}
+
+const SKILL_BANK = [
+  "communication","leadership","teamwork","problem solving","project management",
+  "customer service","sales","negotiation","time management","microsoft excel",
+  "data analysis","sql","python","javascript","react","node","figma","seo",
+  "pos systems","opera pms","micros","wine service","upselling","inventory management",
+  "budgeting","forecasting","scheduling","training","onboarding","crm","salesforce",
+  "content writing","social media","bilingual","multilingual","agile","scrum",
+];
+
+function mockAnalyze(cvText, jdText, jobTitle) {
+  const cvTokens = new Set(tokenize(cvText));
+  const jdTokens = tokenize(jdText);
+  const jdFreq = {};
+  jdTokens.forEach((t) => (jdFreq[t] = (jdFreq[t] || 0) + 1));
+  const jdUnique = Object.keys(jdFreq).sort((a, b) => jdFreq[b] - jdFreq[a]);
+
+  const overlap = jdUnique.filter((w) => cvTokens.has(w));
+  const missingKeywords = jdUnique.filter((w) => !cvTokens.has(w)).slice(0, 8);
+
+  const relevantSkills = SKILL_BANK.filter(
+    (s) => jdText.toLowerCase().includes(s) || cvText.toLowerCase().includes(s)
+  );
+  const matchingSkills = relevantSkills.filter((s) => cvText.toLowerCase().includes(s));
+  const missingSkills = relevantSkills.filter((s) => !cvText.toLowerCase().includes(s)).slice(0, 6);
+
+  const rawOverlapRatio = jdUnique.length ? overlap.length / Math.min(jdUnique.length, 40) : 0.3;
+  let score = Math.round(38 + rawOverlapRatio * 55);
+  score = Math.max(21, Math.min(96, score));
+
+  const hasNumbers = /\d/.test(cvText);
+  const wordCount = tokenize(cvText).length;
+  const structureScore = wordCount > 400 ? "strong" : wordCount > 150 ? "moderate" : "thin";
+  const grammarFlag = /[.!?]{2,}|\s{3,}/.test(cvText);
+
+  return {
+    score,
+    jobTitle: jobTitle || "this role",
+    matchingSkills: matchingSkills.length ? matchingSkills : ["customer communication", "team collaboration"],
+    missingSkills: missingSkills.length ? missingSkills : ["industry-specific software", "measurable achievements"],
+    missingKeywords: missingKeywords.length ? missingKeywords : ["leadership", "results-driven", "cross-functional"],
+    experienceMatch: score > 70 ? "Strong alignment with the role's experience requirements." : score > 45 ? "Partial alignment — some relevant experience is present but not emphasized." : "Limited visible alignment with the role's required experience.",
+    educationMatch: "Education section detected and appears consistent with typical requirements for this role.",
+    structure: structureScore,
+    hasNumbers,
+    grammarFlag,
+    recommendations: [
+      !hasNumbers && "Add measurable achievements (e.g. \"increased X by 20%\") to strengthen impact.",
+      "Mirror 3–5 exact keywords from the job description in your skills and experience sections.",
+      "Tighten your professional summary to highlight your fit for " + (jobTitle || "the target role") + ".",
+      "Reorder your skills so the most job-relevant ones appear first.",
+      grammarFlag && "Review spacing and punctuation — a few formatting inconsistencies were detected.",
+    ].filter(Boolean),
+  };
+}
+
+function buildImprovedCV(cvText, analysis) {
+  const summary = `Results-driven professional targeting ${analysis.jobTitle}, bringing proven strengths in ${analysis.matchingSkills.slice(0,2).join(" and ") || "customer-facing work"} and a track record of reliable, detail-oriented execution.`;
+  const addedSkills = analysis.missingSkills.slice(0, 3);
+  return {
+    summary,
+    addedSkillsLine: addedSkills.length ? addedSkills.join(" · ") : null,
+    keywordLine: analysis.missingKeywords.slice(0, 4).join(" · "),
+  };
+}
+
+/* ============================== SMALL UI PRIMITIVES ============================== */
+function Btn({ children, variant = "primary", size = "md", onClick, icon: Icon, className = "", type = "button", disabled }) {
+  const sizes = { sm: "text-sm px-3.5 py-2", md: "text-sm px-5 py-2.5", lg: "text-base px-7 py-3.5" };
+  const base = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
+  const styles = {
+    primary: { background: C.accent, color: "#fff" },
+    dark: { background: C.navy, color: "#fff" },
+    outline: { background: "transparent", color: C.ink, border: `1.5px solid ${C.line}` },
+    ghost: { background: "transparent", color: C.inkSoft },
+  };
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      style={styles[variant]}
+      className={`${base} ${sizes[size]} hover:brightness-110 active:scale-[0.98] ${className}`}
+    >
+      {Icon && <Icon size={16} strokeWidth={2.25} />}
+      {children}
+    </button>
+  );
+}
+
+function Badge({ tone = "neutral", children }) {
+  const tones = {
+    neutral: { bg: C.accentSoft, color: C.accentDeep },
+    good: { bg: C.successBg, color: C.success },
+    warn: { bg: C.warningBg, color: C.warning },
+    bad: { bg: C.dangerBg, color: C.danger },
+  };
+  const t = tones[tone];
+  return (
+    <span
+      style={{ background: t.bg, color: t.color }}
+      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
+    >
+      {children}
+    </span>
+  );
+}
+
+function Card({ children, className = "", style = {} }) {
+  return (
+    <div
+      style={{ background: C.surface, border: `1px solid ${C.line}`, ...style }}
+      className={`rounded-2xl shadow-sm ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* ============================== NAV ============================== */
+function Nav({ view, setView }) {
+  const [open, setOpen] = useState(false);
+  const links = [
+    { id: "landing", label: "Home" },
+    { id: "analyzer", label: "Analyze CV" },
+    { id: "pricing", label: "Pricing" },
+  ];
+  return (
+    <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(251,252,254,0.9)", backdropFilter: "blur(8px)" }} className="sticky top-0 z-40">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
+        <button onClick={() => setView("landing")} className="flex items-center gap-2">
+          <div style={{ background: C.navy }} className="w-8 h-8 rounded-lg flex items-center justify-center">
+            <FileText size={16} color="#fff" strokeWidth={2.5} />
+          </div>
+          <span className="tc-serif font-semibold text-lg" style={{ color: C.ink }}>TrueCV <span style={{ color: C.accent }}>AI</span></span>
+        </button>
+
+        <nav className="hidden md:flex items-center gap-1">
+          {links.map((l) => (
+            <button
+              key={l.id}
+              onClick={() => setView(l.id)}
+              style={{ color: view === l.id ? C.ink : C.inkSoft, background: view === l.id ? C.accentSoft : "transparent" }}
+              className="px-3.5 py-2 rounded-full text-sm font-medium transition-colors"
+            >
+              {l.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="hidden md:flex items-center gap-2">
+          <Btn variant="ghost" size="sm" onClick={() => setView("login")}>Log in</Btn>
+          <Btn variant="primary" size="sm" onClick={() => setView("analyzer")} icon={Sparkles}>Analyze My CV</Btn>
+        </div>
+
+        <button className="md:hidden p-2" onClick={() => setOpen(!open)} aria-label="Menu">
+          <Menu size={22} />
+        </button>
+      </div>
+      {open && (
+        <div className="md:hidden px-5 pb-4 flex flex-col gap-1" style={{ borderTop: `1px solid ${C.line}` }}>
+          {[...links, { id: "login", label: "Log in" }, { id: "dashboard", label: "Dashboard (demo)" }].map((l) => (
+            <button key={l.id} onClick={() => { setView(l.id); setOpen(false); }} className="text-left py-2.5 text-sm font-medium" style={{ color: C.inkSoft }}>
+              {l.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </header>
+  );
+}
+
+function Footer({ setView }) {
+  return (
+    <footer style={{ background: C.navy, color: "#C7D0E0" }} className="mt-24">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 py-14 grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="col-span-2 md:col-span-1">
+          <span className="tc-serif font-semibold text-lg text-white">TrueCV AI</span>
+          <p className="text-sm mt-3 leading-relaxed" style={{ color: "#8FA0C2" }}>Make your CV job-ready — tailored to every application.</p>
+        </div>
+        {[
+          { title: "Product", items: [["Analyze CV", "analyzer"], ["Pricing", "pricing"], ["How it works", "landing"]] },
+          { title: "Account", items: [["Log in", "login"], ["Sign up", "signup"], ["Dashboard", "dashboard"]] },
+        ].map((col) => (
+          <div key={col.title}>
+            <div className="text-sm font-semibold text-white mb-3">{col.title}</div>
+            <div className="flex flex-col gap-2">
+              {col.items.map(([label, id]) => (
+                <button key={label} onClick={() => setView(id)} className="text-sm text-left" style={{ color: "#8FA0C2" }}>{label}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <div>
+          <div className="text-sm font-semibold text-white mb-3">Legal</div>
+          <p className="text-sm leading-relaxed" style={{ color: "#8FA0C2" }}>TrueCV AI provides suggestions only and does not guarantee interviews, ATS outcomes, or employment.</p>
+        </div>
+      </div>
+      <div className="max-w-6xl mx-auto px-5 sm:px-8 py-5 text-xs flex justify-between" style={{ borderTop: "1px solid #22304F", color: "#6B7D9F" }}>
+        <span>© 2026 TrueCV AI. Demo product.</span>
+        <span>English · Français · العربية</span>
+      </div>
+    </footer>
+  );
+}
+
+/* ============================== HERO MOCKUP (SIGNATURE ELEMENT) ============================== */
+function AnnotatedCVPreview() {
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.line}` }} className="rounded-2xl shadow-xl p-6 sm:p-7 relative overflow-hidden">
+      <div className="absolute left-0 right-0 top-0 h-0.5" style={{ background: `linear-gradient(90deg, transparent, ${C.accent}, transparent)` }} />
+      <div className="tc-scanline absolute left-6 right-6 top-6 h-8 rounded" style={{ background: `linear-gradient(180deg, ${C.accentSoft}, transparent)` }} />
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <div className="tc-serif font-semibold text-base" style={{ color: C.ink }}>Amira Ben Youssef</div>
+          <div className="text-xs" style={{ color: C.inkFaint }}>Hospitality Supervisor — Draft CV</div>
+        </div>
+        <Badge tone="warn">Scanning…</Badge>
+      </div>
+      <div className="space-y-3 text-sm leading-relaxed" style={{ color: C.inkSoft }}>
+        <p>
+          Managed daily floor operations and <span className="tc-underline-good">led a team of 12 staff</span> across service shifts, ensuring guest satisfaction.
+        </p>
+        <p>
+          <span className="tc-strike-bad">Responsible for various tasks</span> <span className="tc-insert">Increased table turnover by 18% through improved service flow</span>.
+        </p>
+        <p>
+          Familiar with reservation software <span className="tc-insert">— including Opera PMS and Micros POS</span>.
+        </p>
+      </div>
+      <div className="mt-6 pt-5 flex items-center justify-between" style={{ borderTop: `1px dashed ${C.line}` }}>
+        <div className="flex items-center gap-3">
+          <div className="relative w-12 h-12">
+            <svg viewBox="0 0 36 36" className="w-12 h-12 -rotate-90">
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke={C.line} strokeWidth="3" />
+              <circle cx="18" cy="18" r="15.5" fill="none" stroke={C.accent} strokeWidth="3" strokeDasharray="78 100" strokeLinecap="round" />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold" style={{ color: C.ink }}>78</span>
+          </div>
+          <div>
+            <div className="text-xs font-semibold" style={{ color: C.ink }}>ATS Compatibility</div>
+            <div className="text-xs" style={{ color: C.inkFaint }}>+21 pts after edits</div>
+          </div>
+        </div>
+        <div className="hidden sm:flex gap-1.5">
+          <Badge tone="good">Wine service ✓</Badge>
+          <Badge tone="bad">POS systems</Badge>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== LANDING PAGE ============================== */
+function ScoreExample() {
+  return (
+    <Card className="p-6 sm:p-8">
+      <div className="grid md:grid-cols-2 gap-8">
+        <div>
+          <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>Example result</div>
+          <div className="tc-serif text-2xl font-semibold mb-1" style={{ color: C.ink }}>ATS Score: 78/100</div>
+          <p className="text-sm mb-5" style={{ color: C.inkSoft }}>Applied to: Front Desk Supervisor, Marriott Doha</p>
+          <div className="space-y-2.5">
+            {[
+              ["Strong customer service experience", "good"],
+              ["Relevant hospitality background", "good"],
+              ["Good English proficiency", "good"],
+              ["POS systems — not mentioned", "bad"],
+              ["Wine service — not mentioned", "bad"],
+            ].map(([t, tone]) => (
+              <div key={t} className="flex items-center gap-2 text-sm" style={{ color: C.inkSoft }}>
+                {tone === "good" ? <Check size={15} style={{ color: C.success }} /> : <X size={15} style={{ color: C.danger }} />}
+                {t}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{ background: C.bg, border: `1px solid ${C.line}` }} className="rounded-xl p-5">
+          <div className="text-xs font-semibold tracking-wide uppercase mb-3" style={{ color: C.inkFaint }}>Recommendations</div>
+          <ul className="space-y-2.5 text-sm" style={{ color: C.inkSoft }}>
+            {["Add measurable achievements to your experience", "Add \"Micros / Opera\" if you've used them", "Reorder skills to match job priorities", "Tighten your professional summary"].map((r) => (
+              <li key={r} className="flex gap-2"><ArrowRight size={14} className="mt-1 shrink-0" style={{ color: C.accent }} />{r}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function Landing({ setView }) {
+  const steps = [
+    { icon: Upload, title: "Upload your CV", copy: "PDF or DOCX — your document stays private and is never shared." },
+    { icon: Briefcase, title: "Paste the job description", copy: "TrueCV AI reads the role's real requirements, not generic templates." },
+    { icon: BarChart3, title: "Get your CV score", copy: "See an ATS compatibility score with missing skills and keywords." },
+    { icon: PenLine, title: "Improve and download", copy: "Get a rewritten CV and tailored cover letter, ready to send." },
+  ];
+  const features = [
+    { icon: ShieldCheck, title: "Truthful by design", copy: "TrueCV AI never invents experience, dates, or credentials — only refines what you provide." },
+    { icon: Globe, title: "Built for global jobs", copy: "Optimized for international, remote, hospitality, tech, business and healthcare roles." },
+    { icon: Layers, title: "Multi-language", copy: "Analyze and rewrite your CV in English, French, or Arabic." },
+    { icon: Clock, title: "Minutes, not hours", copy: "A full analysis, rewrite, and cover letter in under two minutes." },
+  ];
+  const faqs = [
+    ["Does TrueCV guarantee a job?", "No. TrueCV helps improve your CV and tailor it to a specific job, but no tool can guarantee employment or interviews."],
+    ["Can I use any type of CV?", "Yes — TrueCV AI supports PDF and DOCX files."],
+    ["Can I use TrueCV for international jobs?", "Yes, TrueCV AI is built for job seekers applying worldwide, including remote and relocation roles."],
+    ["Can TrueCV write my CV for me?", "TrueCV AI rewrites and improves your content, but only using information you provide — it never fabricates experience or credentials."],
+  ];
+  const [openFaq, setOpenFaq] = useState(0);
+
+  return (
+    <div>
+      {/* HERO */}
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-16 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="tc-fadeup">
+          <Badge>For job seekers worldwide</Badge>
+          <h1 className="tc-serif mt-5 text-4xl sm:text-5xl font-semibold leading-[1.08]" style={{ color: C.ink }}>
+            Make Your CV<br />Job&#8209;Ready.
+          </h1>
+          <p className="mt-5 text-lg leading-relaxed max-w-md" style={{ color: C.inkSoft }}>
+            Upload your CV and paste the job you're applying for. TrueCV AI analyzes your CV, finds what you're missing, improves your content, and helps you stand out.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Btn size="lg" icon={Sparkles} onClick={() => setView("analyzer")}>Analyze My CV</Btn>
+            <Btn size="lg" variant="outline" onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}>See How It Works</Btn>
+          </div>
+          <div className="mt-8 flex items-center gap-5 text-xs" style={{ color: C.inkFaint }}>
+            <span className="flex items-center gap-1.5"><ShieldCheck size={14} /> Private &amp; secure</span>
+            <span className="flex items-center gap-1.5"><Check size={14} /> No fabricated content</span>
+          </div>
+        </div>
+        <div className="tc-fadeup" style={{ animationDelay: "0.1s" }}>
+          <AnnotatedCVPreview />
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
+        <div className="mb-10">
+          <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>How it works</div>
+          <h2 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>From draft CV to job-ready, in four steps</h2>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {steps.map((s, i) => (
+            <div key={s.title} className="relative">
+              <Card className="p-5 h-full">
+                <div style={{ background: C.accentSoft, color: C.accent }} className="w-10 h-10 rounded-xl flex items-center justify-center mb-4">
+                  <s.icon size={18} strokeWidth={2.25} />
+                </div>
+                <div className="text-xs tc-mono mb-1" style={{ color: C.inkFaint }}>Step {i + 1}</div>
+                <div className="font-semibold text-sm mb-1.5" style={{ color: C.ink }}>{s.title}</div>
+                <p className="text-sm leading-relaxed" style={{ color: C.inkSoft }}>{s.copy}</p>
+              </Card>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* EXAMPLE */}
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
+        <div className="mb-8">
+          <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>See it in action</div>
+          <h2 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>A real example analysis</h2>
+        </div>
+        <ScoreExample />
+      </section>
+
+      {/* FEATURES */}
+      <section style={{ background: C.navy }} className="py-16 mt-8">
+        <div className="max-w-6xl mx-auto px-5 sm:px-8">
+          <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: "#8FB3FF" }}>Why TrueCV AI</div>
+          <h2 className="tc-serif text-3xl font-semibold text-white mb-10">Built to be honest, not just optimistic</h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {features.map((f) => (
+              <div key={f.title} style={{ background: C.navySoft, border: "1px solid #22304F" }} className="rounded-2xl p-5">
+                <div style={{ background: "#1F3357", color: "#8FB3FF" }} className="w-10 h-10 rounded-xl flex items-center justify-center mb-4">
+                  <f.icon size={18} strokeWidth={2.25} />
+                </div>
+                <div className="font-semibold text-sm text-white mb-1.5">{f.title}</div>
+                <p className="text-sm leading-relaxed" style={{ color: "#A9B7D1" }}>{f.copy}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING TEASER */}
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
+        <div className="text-center max-w-lg mx-auto mb-10">
+          <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>Pricing</div>
+          <h2 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>Start free. Upgrade when you're ready.</h2>
+        </div>
+        <PricingGrid compact setView={setView} />
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-3xl mx-auto px-5 sm:px-8 py-16">
+        <div className="mb-8 text-center">
+          <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>FAQ</div>
+          <h2 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>Common questions</h2>
+        </div>
+        <div className="space-y-3">
+          {faqs.map(([q, a], i) => (
+            <Card key={q} className="overflow-hidden">
+              <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} className="w-full flex items-center justify-between px-5 py-4 text-left">
+                <span className="font-medium text-sm" style={{ color: C.ink }}>{q}</span>
+                <ChevronDown size={16} style={{ color: C.inkFaint, transform: openFaq === i ? "rotate(180deg)" : "none", transition: "transform .2s" }} />
+              </button>
+              {openFaq === i && <p className="px-5 pb-4 text-sm leading-relaxed" style={{ color: C.inkSoft }}>{a}</p>}
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>What early users say</h2>
+          <Badge tone="warn">Demo content</Badge>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-5">
+          {[
+            ["\"Found gaps in my CV I'd never have noticed — especially missing keywords for ATS.\"", "Yassine K., Software Engineer"],
+            ["\"The cover letter draft saved me an hour and actually matched the job posting.\"", "Sarra M., Hotel Operations"],
+            ["\"Clear, specific recommendations — not generic tips I'd already read elsewhere.\"", "Omar T., Business Analyst"],
+          ].map(([quote, name]) => (
+            <Card key={name} className="p-5">
+              <div className="flex gap-0.5 mb-3">{Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} fill={C.warning} color={C.warning} />)}</div>
+              <p className="text-sm leading-relaxed mb-4" style={{ color: C.inkSoft }}>{quote}</p>
+              <div className="text-xs font-semibold" style={{ color: C.ink }}>{name}</div>
+              <div className="text-xs" style={{ color: C.inkFaint }}>Illustrative demo testimonial</div>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* FINAL CTA */}
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 pb-20">
+        <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.accentDeep})` }} className="rounded-3xl px-8 py-14 text-center">
+          <h2 className="tc-serif text-3xl sm:text-4xl font-semibold text-white mb-3">Ready to make your CV job-ready?</h2>
+          <p className="mb-7" style={{ color: "#C7D6F5" }}>Your first analysis is free — no credit card required.</p>
+          <Btn size="lg" onClick={() => setView("analyzer")} icon={Sparkles}>Analyze My CV</Btn>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* ============================== ANALYZER ============================== */
+function Analyzer({ setView, setAnalysis, setCvInput }) {
+  const [cvText, setCvText] = useState("");
+  const [jdText, setJdText] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [lang, setLang] = useState("English");
+  const [fileName, setFileName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const fileRef = useRef(null);
+
+  const canSubmit = cvText.trim().length > 20 && jdText.trim().length > 20;
+
+  function handleFile(e) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setFileName(f.name);
+    if (f.type === "text/plain") {
+      const reader = new FileReader();
+      reader.onload = () => setCvText(String(reader.result || ""));
+      reader.readAsText(f);
+    }
+  }
+
+  function runAnalysis() {
+    setLoading(true);
+    setTimeout(() => {
+      const result = mockAnalyze(cvText, jdText, jobTitle);
+      setAnalysis(result);
+      setCvInput(cvText);
+      setLoading(false);
+      setView("results");
+    }, 1100);
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-12">
+      <button onClick={() => setView("landing")} className="flex items-center gap-1.5 text-sm mb-6" style={{ color: C.inkSoft }}>
+        <ArrowLeft size={15} /> Back
+      </button>
+      <div className="mb-8">
+        <Badge>Step 1 of 2</Badge>
+        <h1 className="tc-serif text-3xl font-semibold mt-4" style={{ color: C.ink }}>Analyze your CV</h1>
+        <p className="mt-2 text-sm" style={{ color: C.inkSoft }}>Upload or paste your CV, then paste the job description you're applying to.</p>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-5 mb-5">
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-semibold" style={{ color: C.ink }}>Your CV</label>
+            <span className="text-xs" style={{ color: C.inkFaint }}>PDF, DOCX, or paste text</span>
+          </div>
+          <button
+            onClick={() => fileRef.current?.click()}
+            style={{ borderColor: C.line, background: C.bg }}
+            className="w-full border-2 border-dashed rounded-xl py-5 flex flex-col items-center gap-2 mb-3 hover:opacity-80"
+          >
+            <Upload size={18} style={{ color: C.accent }} />
+            <span className="text-sm font-medium" style={{ color: C.ink }}>{fileName || "Upload CV file"}</span>
+            <span className="text-xs" style={{ color: C.inkFaint }}>.pdf or .docx — kept private to your account</span>
+          </button>
+          <input ref={fileRef} type="file" accept=".pdf,.docx,.txt" className="hidden" onChange={handleFile} />
+          <textarea
+            value={cvText}
+            onChange={(e) => setCvText(e.target.value)}
+            placeholder="…or paste your CV text here"
+            rows={8}
+            style={{ borderColor: C.line }}
+            className="w-full rounded-lg border p-3 text-sm resize-none"
+          />
+        </Card>
+
+        <Card className="p-5">
+          <label className="text-sm font-semibold block mb-3" style={{ color: C.ink }}>Job description</label>
+          <textarea
+            value={jdText}
+            onChange={(e) => setJdText(e.target.value)}
+            placeholder="Paste the full job description here…"
+            rows={8}
+            style={{ borderColor: C.line }}
+            className="w-full rounded-lg border p-3 text-sm resize-none mb-3"
+          />
+          <label className="text-sm font-semibold block mb-2" style={{ color: C.ink }}>Target job title</label>
+          <input
+            value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value)}
+            placeholder="e.g. Front Desk Supervisor"
+            style={{ borderColor: C.line }}
+            className="w-full rounded-lg border p-2.5 text-sm"
+          />
+        </Card>
+      </div>
+
+      <Card className="p-5 mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <label className="text-sm font-semibold block mb-2" style={{ color: C.ink }}>Language</label>
+          <div className="flex gap-2">
+            {["English", "Français", "العربية"].map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                style={{ background: lang === l ? C.accent : C.bg, color: lang === l ? "#fff" : C.inkSoft, border: `1px solid ${lang === l ? C.accent : C.line}` }}
+                className="px-3.5 py-1.5 rounded-full text-sm font-medium"
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Btn size="lg" icon={loading ? undefined : Sparkles} disabled={!canSubmit || loading} onClick={runAnalysis}>
+          {loading ? "Analyzing…" : "Analyze My CV"}
+        </Btn>
+      </Card>
+      {!canSubmit && (
+        <p className="text-xs" style={{ color: C.inkFaint }}>Add at least a short CV and job description to continue.</p>
+      )}
+    </div>
+  );
+}
+
+/* ============================== RESULTS ============================== */
+function ScoreRing({ score }) {
+  const tone = score >= 70 ? C.success : score >= 45 ? C.warning : C.danger;
+  const circumference = 2 * Math.PI * 44;
+  const dash = (score / 100) * circumference;
+  return (
+    <div className="relative w-28 h-28 shrink-0">
+      <svg viewBox="0 0 100 100" className="w-28 h-28 -rotate-90">
+        <circle cx="50" cy="50" r="44" fill="none" stroke={C.line} strokeWidth="8" />
+        <circle cx="50" cy="50" r="44" fill="none" stroke={tone} strokeWidth="8" strokeDasharray={`${dash} ${circumference}`} strokeLinecap="round" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold" style={{ color: C.ink }}>{score}</span>
+        <span className="text-[10px]" style={{ color: C.inkFaint }}>/ 100</span>
+      </div>
+    </div>
+  );
+}
+
+function ResultSection({ icon: Icon, title, tone, children }) {
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <div style={{ background: tone ? { good: C.successBg, warn: C.warningBg, bad: C.dangerBg }[tone] : C.accentSoft, color: tone ? { good: C.success, warn: C.warning, bad: C.danger }[tone] : C.accent }} className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0">
+          <Icon size={15} strokeWidth={2.25} />
+        </div>
+        <h3 className="font-semibold text-sm" style={{ color: C.ink }}>{title}</h3>
+      </div>
+      {children}
+    </Card>
+  );
+}
+
+function Results({ analysis, setView, cvInput }) {
+  if (!analysis) {
+    return (
+      <div className="max-w-2xl mx-auto px-5 py-24 text-center">
+        <p style={{ color: C.inkSoft }} className="mb-4">No analysis yet — run one first.</p>
+        <Btn onClick={() => setView("analyzer")}>Go to Analyzer</Btn>
+      </div>
+    );
+  }
+  const tone = analysis.score >= 70 ? "good" : analysis.score >= 45 ? "warn" : "bad";
+
+  return (
+    <div className="max-w-5xl mx-auto px-5 sm:px-8 py-12">
+      <button onClick={() => setView("analyzer")} className="flex items-center gap-1.5 text-sm mb-6" style={{ color: C.inkSoft }}>
+        <ArrowLeft size={15} /> New analysis
+      </button>
+
+      <Card className="p-6 sm:p-7 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-6">
+        <ScoreRing score={analysis.score} />
+        <div className="flex-1">
+          <Badge tone={tone}>{tone === "good" ? "Strong match" : tone === "warn" ? "Needs improvement" : "Significant gaps"}</Badge>
+          <h1 className="tc-serif text-2xl font-semibold mt-3" style={{ color: C.ink }}>ATS Compatibility Score</h1>
+          <p className="text-sm mt-1" style={{ color: C.inkSoft }}>For: {analysis.jobTitle}</p>
+          <p className="text-xs mt-3 max-w-md" style={{ color: C.inkFaint }}>This score is an AI-generated estimate to guide improvements — it does not represent or guarantee results from any specific employer's ATS.</p>
+        </div>
+        <div className="flex flex-col gap-2 w-full sm:w-auto">
+          <Btn icon={PenLine} onClick={() => setView("improve")}>Improve My CV</Btn>
+          <Btn variant="outline" icon={Mail} onClick={() => setView("coverletter")}>Generate Cover Letter</Btn>
+        </div>
+      </Card>
+
+      <div className="grid md:grid-cols-2 gap-5 mb-5">
+        <ResultSection icon={Check} title="Matching Skills" tone="good">
+          <div className="flex flex-wrap gap-2">
+            {analysis.matchingSkills.map((s) => <Badge key={s} tone="good">{s}</Badge>)}
+          </div>
+        </ResultSection>
+        <ResultSection icon={X} title="Missing Skills" tone="bad">
+          <div className="flex flex-wrap gap-2">
+            {analysis.missingSkills.map((s) => <Badge key={s} tone="bad">{s}</Badge>)}
+          </div>
+        </ResultSection>
+        <ResultSection icon={AlertTriangle} title="Missing Keywords" tone="warn">
+          <div className="flex flex-wrap gap-2">
+            {analysis.missingKeywords.map((s) => <Badge key={s} tone="warn">{s}</Badge>)}
+          </div>
+        </ResultSection>
+        <ResultSection icon={Briefcase} title="Experience Match">
+          <p className="text-sm" style={{ color: C.inkSoft }}>{analysis.experienceMatch}</p>
+        </ResultSection>
+        <ResultSection icon={GraduationCap} title="Education Match">
+          <p className="text-sm" style={{ color: C.inkSoft }}>{analysis.educationMatch}</p>
+        </ResultSection>
+        <ResultSection icon={Layers} title="CV Structure" tone={analysis.structure === "strong" ? "good" : analysis.structure === "moderate" ? "warn" : "bad"}>
+          <p className="text-sm capitalize" style={{ color: C.inkSoft }}>{analysis.structure} content depth detected{!analysis.hasNumbers && " — no measurable achievements found."}</p>
+        </ResultSection>
+      </div>
+
+      <ResultSection icon={ShieldCheck} title="Recommendations" className="mb-5">
+        <ul className="space-y-2.5">
+          {analysis.recommendations.map((r) => (
+            <li key={r} className="flex gap-2 text-sm" style={{ color: C.inkSoft }}>
+              <ArrowRight size={14} className="mt-1 shrink-0" style={{ color: C.accent }} />{r}
+            </li>
+          ))}
+        </ul>
+      </ResultSection>
+
+      {analysis.grammarFlag && (
+        <div style={{ background: C.warningBg, border: `1px solid #F0DBA8` }} className="rounded-xl p-4 flex gap-3 items-start text-sm mb-6">
+          <AlertTriangle size={16} style={{ color: C.warning }} className="mt-0.5 shrink-0" />
+          <span style={{ color: "#8A5A0A" }}>Potential problem: some spacing or punctuation inconsistencies were detected in your CV. Reviewing formatting can help with ATS parsing.</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================== IMPROVE CV ============================== */
+function ImproveCV({ analysis, cvInput, setView }) {
+  const [accepted, setAccepted] = useState(false);
+  if (!analysis) return <div className="max-w-2xl mx-auto px-5 py-24 text-center"><Btn onClick={() => setView("analyzer")}>Start an analysis</Btn></div>;
+  const improved = buildImprovedCV(cvInput, analysis);
+
+  return (
+    <div className="max-w-5xl mx-auto px-5 sm:px-8 py-12">
+      <button onClick={() => setView("results")} className="flex items-center gap-1.5 text-sm mb-6" style={{ color: C.inkSoft }}>
+        <ArrowLeft size={15} /> Back to results
+      </button>
+      <Badge>AI suggestion — review before use</Badge>
+      <h1 className="tc-serif text-3xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>Improve My CV</h1>
+      <p className="text-sm mb-8 max-w-xl" style={{ color: C.inkSoft }}>TrueCV AI only rewrites and reorganizes information you provided — it never invents experience, dates, or credentials.</p>
+
+      <div className="grid md:grid-cols-2 gap-5 mb-6">
+        <Card className="p-5">
+          <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: C.inkFaint }}>Original summary</div>
+          <p className="text-sm leading-relaxed" style={{ color: C.inkSoft }}>
+            {cvInput ? cvInput.slice(0, 220) + (cvInput.length > 220 ? "…" : "") : "No professional summary detected in your original CV."}
+          </p>
+        </Card>
+        <Card className="p-5" style={{ borderColor: C.success }}>
+          <div className="text-xs font-semibold uppercase tracking-wide mb-3 flex items-center gap-1.5" style={{ color: C.success }}>
+            <Sparkles size={13} /> Improved summary
+          </div>
+          <p className="text-sm leading-relaxed" style={{ color: C.ink }}>{improved.summary}</p>
+        </Card>
+      </div>
+
+      <Card className="p-5 mb-6">
+        <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: C.inkFaint }}>Explanation of major changes</div>
+        <ul className="space-y-2.5 text-sm" style={{ color: C.inkSoft }}>
+          <li className="flex gap-2"><Check size={15} style={{ color: C.success }} className="mt-0.5 shrink-0" /> Rewrote the professional summary to target {analysis.jobTitle}.</li>
+          {improved.addedSkillsLine && <li className="flex gap-2"><Check size={15} style={{ color: C.success }} className="mt-0.5 shrink-0" /> Surfaced existing skills relevant to this role: <span className="font-medium ml-1" style={{ color: C.ink }}>{improved.addedSkillsLine}</span></li>}
+          <li className="flex gap-2"><Check size={15} style={{ color: C.success }} className="mt-0.5 shrink-0" /> Suggested keyword additions (only add if truthful): <span className="font-medium ml-1" style={{ color: C.ink }}>{improved.keywordLine}</span></li>
+          <li className="flex gap-2"><Check size={15} style={{ color: C.success }} className="mt-0.5 shrink-0" /> Reordered skills to prioritize job-relevant items first.</li>
+        </ul>
+      </Card>
+
+      <div className="flex items-center gap-3 mb-4">
+        <input id="review" type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} className="w-4 h-4" />
+        <label htmlFor="review" className="text-sm" style={{ color: C.inkSoft }}>I reviewed the changes and confirm all content remains accurate.</label>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <Btn icon={Download} disabled={!accepted} onClick={() => alert("Demo: PDF export requires connecting a PDF-generation backend.")}>Download Improved CV (PDF)</Btn>
+        <Btn variant="outline" icon={Mail} onClick={() => setView("coverletter")}>Generate Cover Letter</Btn>
+      </div>
+    </div>
+  );
+}
+
+/* ============================== COVER LETTER ============================== */
+function CoverLetter({ analysis, setView }) {
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
+  const [tone, setTone] = useState("Professional");
+  const [generated, setGenerated] = useState(false);
+
+  if (!analysis) return <div className="max-w-2xl mx-auto px-5 py-24 text-center"><Btn onClick={() => setView("analyzer")}>Start an analysis</Btn></div>;
+
+  const toneCopy = {
+    Formal: `I am writing to formally express my interest in the ${analysis.jobTitle} position${company ? ` at ${company}` : ""}.`,
+    Professional: `I'm excited to apply for the ${analysis.jobTitle} role${company ? ` at ${company}` : ""}, where I can bring my relevant experience to your team.`,
+    Concise: `I'd like to apply for the ${analysis.jobTitle} role${company ? ` at ${company}` : ""}. Here's why I'm a strong fit.`,
+  };
+
+  const letter = `${toneCopy[tone]}
+
+My background includes strengths in ${analysis.matchingSkills.slice(0, 3).join(", ") || "customer-facing and organizational work"}, which align directly with the requirements outlined in your posting. In my recent roles, I've focused on delivering consistent, measurable results while collaborating closely with cross-functional teams.
+
+I'm particularly drawn to this opportunity because it matches my experience and career direction. I'd welcome the chance to discuss how my background can contribute to your team's goals.
+
+Thank you for your time and consideration.
+
+${tone === "Concise" ? "Best," : "Sincerely,"}
+${name || "[Your name]"}`;
+
+  return (
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-12">
+      <button onClick={() => setView("results")} className="flex items-center gap-1.5 text-sm mb-6" style={{ color: C.inkSoft }}>
+        <ArrowLeft size={15} /> Back to results
+      </button>
+      <h1 className="tc-serif text-3xl font-semibold mb-2" style={{ color: C.ink }}>Generate Cover Letter</h1>
+      <p className="text-sm mb-8" style={{ color: C.inkSoft }}>Tailored to: {analysis.jobTitle}</p>
+
+      <Card className="p-5 mb-5 grid sm:grid-cols-3 gap-4">
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Your name</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Company</label>
+          <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company name" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2 text-sm" />
+        </div>
+        <div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Tone</label>
+          <div className="flex gap-1.5">
+            {["Formal", "Professional", "Concise"].map((t) => (
+              <button key={t} onClick={() => setTone(t)} style={{ background: tone === t ? C.accent : C.bg, color: tone === t ? "#fff" : C.inkSoft, border: `1px solid ${tone === t ? C.accent : C.line}` }} className="px-2.5 py-1.5 rounded-full text-xs font-medium">
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      <Btn icon={Sparkles} onClick={() => setGenerated(true)} className="mb-5">Generate</Btn>
+
+      {generated && (
+        <Card className="p-6">
+          <pre className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: C.ink, fontFamily: "inherit" }}>{letter}</pre>
+          <div className="mt-6 flex gap-3">
+            <Btn icon={Download} onClick={() => alert("Demo: PDF export requires connecting a PDF-generation backend.")}>Download as PDF</Btn>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ============================== PRICING ============================== */
+function PricingGrid({ compact, setView }) {
+  const plans = [
+    { name: "Free", price: "$0", period: "", features: ["1 CV analysis", "ATS compatibility score", "Basic recommendations"], cta: "Start free", variant: "outline" },
+    { name: "Pro", price: "$9.99", period: "/mo", features: ["Unlimited CV analyses", "Advanced ATS analysis", "CV optimization", "Tailored cover letters", "PDF downloads", "Saved analyses"], cta: "Upgrade to Pro", variant: "primary", highlight: true },
+    { name: "Career Package", price: "$19.99", period: "/mo", features: ["Everything in Pro", "Multiple CV versions", "Multiple languages", "Interview preparation", "Job application tracking", "Priority AI processing"], cta: "Get Career Package", variant: "dark" },
+  ];
+  return (
+    <div className="grid md:grid-cols-3 gap-5">
+      {plans.map((p) => (
+        <Card key={p.name} className={`p-6 relative ${p.highlight ? "md:-translate-y-2" : ""}`} style={p.highlight ? { borderColor: C.accent, borderWidth: 2 } : {}}>
+          {p.highlight && <div className="absolute -top-3 left-6"><Badge>Most popular</Badge></div>}
+          <div className="font-semibold text-sm mb-2" style={{ color: C.inkSoft }}>{p.name}</div>
+          <div className="flex items-baseline gap-1 mb-5">
+            <span className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>{p.price}</span>
+            <span className="text-sm" style={{ color: C.inkFaint }}>{p.period}</span>
+          </div>
+          <ul className="space-y-2.5 mb-6">
+            {p.features.map((f) => (
+              <li key={f} className="flex gap-2 text-sm" style={{ color: C.inkSoft }}>
+                <Check size={15} style={{ color: C.success }} className="mt-0.5 shrink-0" />{f}
+              </li>
+            ))}
+          </ul>
+          <Btn variant={p.variant} className="w-full" onClick={() => setView(p.name === "Free" ? "analyzer" : "signup")}>{p.cta}</Btn>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function PricingPage({ setView }) {
+  return (
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-14">
+      <div className="text-center max-w-lg mx-auto mb-10">
+        <Badge>Pricing</Badge>
+        <h1 className="tc-serif text-4xl font-semibold mt-4" style={{ color: C.ink }}>Simple plans, real results</h1>
+        <p className="mt-3 text-sm" style={{ color: C.inkSoft }}>Prices shown are placeholders and may change. Cancel anytime.</p>
+      </div>
+      <PricingGrid setView={setView} />
+      <div className="text-center mt-10 text-xs" style={{ color: C.inkFaint }}>Payments are not yet processed in this demo — no charges will occur.</div>
+    </div>
+  );
+}
+
+/* ============================== AUTH ============================== */
+function AuthPage({ mode, setView }) {
+  const [showPw, setShowPw] = useState(false);
+  const isLogin = mode === "login";
+  return (
+    <div className="max-w-md mx-auto px-5 py-20">
+      <Card className="p-8">
+        <div style={{ background: C.navy }} className="w-10 h-10 rounded-xl flex items-center justify-center mb-5">
+          <Lock size={17} color="#fff" />
+        </div>
+        <h1 className="tc-serif text-2xl font-semibold mb-1" style={{ color: C.ink }}>{isLogin ? "Welcome back" : "Create your account"}</h1>
+        <p className="text-sm mb-6" style={{ color: C.inkSoft }}>{isLogin ? "Log in to access your saved CVs and analyses." : "Start improving your CV in minutes."}</p>
+
+        <form onSubmit={(e) => { e.preventDefault(); setView("dashboard"); }} className="space-y-4">
+          {!isLogin && (
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Full name</label>
+              <div className="relative">
+                <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.inkFaint }} />
+                <input required style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 pl-9 text-sm" placeholder="Your name" />
+              </div>
+            </div>
+          )}
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Email</label>
+            <div className="relative">
+              <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.inkFaint }} />
+              <input required type="email" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 pl-9 text-sm" placeholder="you@example.com" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Password</label>
+            <div className="relative">
+              <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: C.inkFaint }} />
+              <input required type={showPw ? "text" : "password"} style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 pl-9 pr-9 text-sm" placeholder="••••••••" />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2">
+                {showPw ? <EyeOff size={15} style={{ color: C.inkFaint }} /> : <Eye size={15} style={{ color: C.inkFaint }} />}
+              </button>
+            </div>
+          </div>
+          {isLogin && <button type="button" onClick={() => setView("forgot")} className="text-xs font-medium" style={{ color: C.accent }}>Forgot password?</button>}
+          <Btn type="submit" className="w-full" size="lg">{isLogin ? "Log in" : "Sign up"}</Btn>
+        </form>
+
+        <p className="text-xs text-center mt-5" style={{ color: C.inkFaint }}>
+          Demo only — account creation isn't yet connected to a backend.
+        </p>
+        <p className="text-sm text-center mt-4" style={{ color: C.inkSoft }}>
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <button onClick={() => setView(isLogin ? "signup" : "login")} className="font-semibold" style={{ color: C.accent }}>
+            {isLogin ? "Sign up" : "Log in"}
+          </button>
+        </p>
+      </Card>
+    </div>
+  );
+}
+
+function ForgotPassword({ setView }) {
+  const [sent, setSent] = useState(false);
+  return (
+    <div className="max-w-md mx-auto px-5 py-20">
+      <Card className="p-8">
+        <h1 className="tc-serif text-2xl font-semibold mb-1" style={{ color: C.ink }}>Reset your password</h1>
+        <p className="text-sm mb-6" style={{ color: C.inkSoft }}>We'll send a reset link to your email.</p>
+        {sent ? (
+          <div style={{ background: C.successBg, color: C.success }} className="rounded-lg p-4 text-sm flex gap-2">
+            <Check size={16} className="mt-0.5 shrink-0" /> If an account exists, a reset link has been sent (demo).
+          </div>
+        ) : (
+          <form onSubmit={(e) => { e.preventDefault(); setSent(true); }} className="space-y-4">
+            <input required type="email" placeholder="you@example.com" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+            <Btn type="submit" className="w-full">Send reset link</Btn>
+          </form>
+        )}
+        <button onClick={() => setView("login")} className="text-sm font-medium mt-5 flex items-center gap-1.5" style={{ color: C.accent }}>
+          <ArrowLeft size={14} /> Back to log in
+        </button>
+      </Card>
+    </div>
+  );
+}
+
+/* ============================== DASHBOARD ============================== */
+function Dashboard({ setView, analysis }) {
+  const history = [
+    { role: "Front Desk Supervisor", company: "Marriott Doha", score: 78, date: "Aug 20" },
+    { role: "Guest Relations Officer", company: "Four Seasons", score: 64, date: "Aug 12" },
+    { role: "Operations Coordinator", company: "Emaar Hospitality", score: 55, date: "Aug 3" },
+  ];
+  return (
+    <div className="max-w-5xl mx-auto px-5 sm:px-8 py-12">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>Your dashboard</h1>
+          <p className="text-sm mt-1" style={{ color: C.inkSoft }}>Demo data — connect an account to save real analyses.</p>
+        </div>
+        <Btn variant="ghost" icon={LogOut} onClick={() => setView("landing")}>Log out</Btn>
+      </div>
+
+      <div className="flex gap-3 mb-8">
+        <Btn icon={Plus} onClick={() => setView("analyzer")}>New analysis</Btn>
+        <Btn variant="outline" icon={FolderOpen} onClick={() => setView("pricing")}>Manage plan</Btn>
+      </div>
+
+      <div className="grid sm:grid-cols-3 gap-5 mb-8">
+        {[["Analyses run", history.length], ["Saved CVs", 2], ["Cover letters", 1]].map(([label, val]) => (
+          <Card key={label} className="p-5">
+            <div className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>{val}</div>
+            <div className="text-xs mt-1" style={{ color: C.inkFaint }}>{label}</div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: C.inkFaint }}>Previous CV analyses</div>
+      <div className="space-y-3">
+        {history.map((h) => (
+          <Card key={h.role} className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div style={{ background: C.accentSoft, color: C.accent }} className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0">
+                <FileText size={15} />
+              </div>
+              <div>
+                <div className="text-sm font-semibold" style={{ color: C.ink }}>{h.role}</div>
+                <div className="text-xs" style={{ color: C.inkFaint }}>{h.company} · {h.date}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge tone={h.score >= 70 ? "good" : h.score >= 45 ? "warn" : "bad"}>{h.score}/100</Badge>
+              <ChevronRight size={16} style={{ color: C.inkFaint }} />
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============================== APP ROOT ============================== */
+export default function TrueCVApp() {
+  const [view, setView] = useState("landing");
+  const [analysis, setAnalysis] = useState(null);
+  const [cvInput, setCvInput] = useState("");
+
+  const page = useMemo(() => {
+    switch (view) {
+      case "analyzer": return <Analyzer setView={setView} setAnalysis={setAnalysis} setCvInput={setCvInput} />;
+      case "results": return <Results analysis={analysis} setView={setView} cvInput={cvInput} />;
+      case "improve": return <ImproveCV analysis={analysis} cvInput={cvInput} setView={setView} />;
+      case "coverletter": return <CoverLetter analysis={analysis} setView={setView} />;
+      case "pricing": return <PricingPage setView={setView} />;
+      case "login": return <AuthPage mode="login" setView={setView} />;
+      case "signup": return <AuthPage mode="signup" setView={setView} />;
+      case "forgot": return <ForgotPassword setView={setView} />;
+      case "dashboard": return <Dashboard setView={setView} analysis={analysis} />;
+      default: return <Landing setView={setView} />;
+    }
+  }, [view, analysis, cvInput]);
+
+  return (
+    <div className="tc-root min-h-screen tc-scrollbar">
+      <style>{FONTS}</style>
+      <Nav view={view} setView={setView} />
+      {page}
+      <Footer setView={setView} />
+    </div>
+  );
+}
