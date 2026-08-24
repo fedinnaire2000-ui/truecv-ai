@@ -185,6 +185,7 @@ function Nav({ view, setView }) {
     { id: "landing", label: "Home" },
     { id: "analyzer", label: "Analyze CV" },
     { id: "tracker", label: "Job Tracker" },
+    { id: "salary", label: "Salary Insights" },
     { id: "pricing", label: "Pricing" },
   ];
   return (
@@ -1277,6 +1278,114 @@ function JobTracker({ setView }) {
   );
 }
 
+/* ============================== SALARY INSIGHTS ============================== */
+const SALARY_BASE = {
+  "hospitality": 700, "waiter": 700, "chef": 1200, "hotel": 900, "receptionist": 750,
+  "software": 2500, "developer": 2500, "engineer": 2200, "programmer": 2400,
+  "sales": 1000, "marketing": 1100, "business": 1300, "analyst": 1400,
+  "nurse": 1200, "healthcare": 1300, "doctor": 3000,
+  "teacher": 900, "education": 850,
+  "accountant": 1200, "finance": 1600,
+  "manager": 1800, "supervisor": 1100, "director": 3200,
+  "default": 1100,
+};
+const COUNTRY_MULTIPLIER = {
+  "qatar": 2.1, "doha": 2.1, "uae": 2.0, "dubai": 2.0, "abu dhabi": 2.0,
+  "saudi": 1.7, "riyadh": 1.7, "jeddah": 1.7,
+  "kuwait": 1.9, "bahrain": 1.6, "oman": 1.5,
+  "france": 2.4, "germany": 2.5, "uk": 2.6, "united kingdom": 2.6,
+  "usa": 3.0, "united states": 3.0, "canada": 2.7,
+  "tunisia": 1.0, "morocco": 1.1, "algeria": 1.0, "egypt": 0.8,
+  "default": 1.4,
+};
+
+function estimateSalary(jobTitle, country, experience) {
+  const t = (jobTitle || "").toLowerCase();
+  const c = (country || "").toLowerCase();
+  let base = SALARY_BASE.default;
+  for (const key in SALARY_BASE) {
+    if (key !== "default" && t.includes(key)) { base = SALARY_BASE[key]; break; }
+  }
+  let mult = COUNTRY_MULTIPLIER.default;
+  for (const key in COUNTRY_MULTIPLIER) {
+    if (key !== "default" && c.includes(key)) { mult = COUNTRY_MULTIPLIER[key]; break; }
+  }
+  const expMult = experience === "senior" ? 1.6 : experience === "mid" ? 1.2 : 1.0;
+  const mid = Math.round((base * mult * expMult) / 10) * 10;
+  const low = Math.round(mid * 0.78 / 10) * 10;
+  const high = Math.round(mid * 1.3 / 10) * 10;
+  return { low, mid, high };
+}
+
+function SalaryInsights({ setView }) {
+  const [jobTitle, setJobTitle] = useState("");
+  const [country, setCountry] = useState("");
+  const [experience, setExperience] = useState("entry");
+  const [result, setResult] = useState(null);
+
+  function calculate() {
+    if (!jobTitle.trim() || !country.trim()) return;
+    setResult(estimateSalary(jobTitle, country, experience));
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto px-5 sm:px-8 py-12">
+      <Badge>AI-estimated ranges</Badge>
+      <h1 className="tc-serif text-3xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>Salary Insights</h1>
+      <p className="text-sm mb-8 max-w-lg" style={{ color: C.inkSoft }}>Get an estimated monthly salary range for a role and country before your interview — useful for negotiation.</p>
+
+      <Card className="p-5 mb-6">
+        <div className="grid sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Job title</label>
+            <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Front Desk Supervisor" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Country / city</label>
+            <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. Qatar, France, Tunisia" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+          </div>
+        </div>
+        <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Experience level</label>
+        <div className="flex gap-2 mb-5">
+          {[["entry", "Entry (0-2 yrs)"], ["mid", "Mid (3-6 yrs)"], ["senior", "Senior (7+ yrs)"]].map(([id, label]) => (
+            <button key={id} onClick={() => setExperience(id)} style={{ background: experience === id ? C.accent : C.bg, color: experience === id ? "#fff" : C.inkSoft, border: `1px solid ${experience === id ? C.accent : C.line}` }} className="px-3 py-1.5 rounded-full text-xs font-medium">
+              {label}
+            </button>
+          ))}
+        </div>
+        <Btn icon={Sparkles} onClick={calculate}>Estimate salary</Btn>
+      </Card>
+
+      {result && (
+        <Card className="p-6">
+          <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: C.inkFaint }}>Estimated monthly range ({jobTitle} — {country})</div>
+          <div className="flex items-end gap-2 mb-4">
+            <span className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>${result.low.toLocaleString()} – ${result.high.toLocaleString()}</span>
+          </div>
+          <div style={{ background: C.bg, border: `1px solid ${C.line}` }} className="rounded-xl p-4 mb-4">
+            <div className="flex justify-between text-xs mb-1" style={{ color: C.inkFaint }}>
+              <span>Lower end</span><span>Typical</span><span>Upper end</span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden flex" style={{ background: C.line }}>
+              <div style={{ width: "33%", background: C.accentSoft }} />
+              <div style={{ width: "34%", background: C.accent }} />
+              <div style={{ width: "33%", background: C.accentSoft }} />
+            </div>
+            <div className="flex justify-between text-sm font-semibold mt-2" style={{ color: C.ink }}>
+              <span>${result.low.toLocaleString()}</span><span>${result.mid.toLocaleString()}</span><span>${result.high.toLocaleString()}</span>
+            </div>
+          </div>
+          <p className="text-xs" style={{ color: C.inkFaint }}>This is an AI-generated estimate based on role and location trends — actual offers vary by company, benefits, and negotiation. Not a guarantee of any specific salary.</p>
+        </Card>
+      )}
+
+      <div className="mt-8 text-center">
+        <Btn variant="outline" onClick={() => setView("analyzer")}>Analyze your CV</Btn>
+      </div>
+    </div>
+  );
+}
+
 /* ============================== APP ROOT ============================== */
 export default function TrueCVApp() {
   const [view, setView] = useState("landing");
@@ -1295,6 +1404,7 @@ export default function TrueCVApp() {
       case "forgot": return <ForgotPassword setView={setView} />;
       case "dashboard": return <Dashboard setView={setView} analysis={analysis} />;
       case "tracker": return <JobTracker setView={setView} />;
+      case "salary": return <SalaryInsights setView={setView} />;
       default: return <Landing setView={setView} />;
     }
   }, [view, analysis, cvInput]);
