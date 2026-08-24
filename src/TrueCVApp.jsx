@@ -184,6 +184,7 @@ function Nav({ view, setView }) {
   const links = [
     { id: "landing", label: "Home" },
     { id: "analyzer", label: "Analyze CV" },
+    { id: "tracker", label: "Job Tracker" },
     { id: "pricing", label: "Pricing" },
   ];
   return (
@@ -1117,6 +1118,165 @@ function Dashboard({ setView, analysis }) {
   );
 }
 
+/* ============================== JOB TRACKER ============================== */
+const TRACKER_KEY = "truecv_job_tracker_v1";
+const TRACKER_STATUSES = [
+  { id: "applied", label: "Applied", tone: "neutral" },
+  { id: "interview", label: "Interview", tone: "warn" },
+  { id: "offer", label: "Offer", tone: "good" },
+  { id: "rejected", label: "Rejected", tone: "bad" },
+];
+
+function loadTrackerData() {
+  try {
+    const raw = window.localStorage.getItem(TRACKER_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+function saveTrackerData(items) {
+  try {
+    window.localStorage.setItem(TRACKER_KEY, JSON.stringify(items));
+  } catch {}
+}
+
+function JobTracker({ setView }) {
+  const [items, setItems] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ role: "", company: "", location: "", status: "applied", notes: "" });
+
+  React.useEffect(() => {
+    setItems(loadTrackerData());
+    setLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (loaded) saveTrackerData(items);
+  }, [items, loaded]);
+
+  function addItem() {
+    if (!form.role.trim() || !form.company.trim()) return;
+    const newItem = { id: Date.now().toString(), ...form, date: new Date().toISOString().slice(0, 10) };
+    setItems([newItem, ...items]);
+    setForm({ role: "", company: "", location: "", status: "applied", notes: "" });
+    setShowForm(false);
+  }
+  function updateStatus(id, status) {
+    setItems(items.map((it) => (it.id === id ? { ...it, status } : it)));
+  }
+  function removeItem(id) {
+    setItems(items.filter((it) => it.id !== id));
+  }
+
+  const counts = TRACKER_STATUSES.reduce((acc, s) => {
+    acc[s.id] = items.filter((it) => it.status === s.id).length;
+    return acc;
+  }, {});
+
+  return (
+    <div className="max-w-5xl mx-auto px-5 sm:px-8 py-12">
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <div>
+          <Badge>Track every application</Badge>
+          <h1 className="tc-serif text-3xl font-semibold mt-4" style={{ color: C.ink }}>Job Application Tracker</h1>
+          <p className="mt-2 text-sm max-w-lg" style={{ color: C.inkSoft }}>Keep every application, interview, and offer in one place — saved privately in this browser.</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 my-7">
+        {TRACKER_STATUSES.map((s) => (
+          <Card key={s.id} className="p-4">
+            <div className="text-2xl font-bold" style={{ color: C.ink }}>{counts[s.id] || 0}</div>
+            <div className="text-xs mt-1" style={{ color: C.inkFaint }}>{s.label}</div>
+          </Card>
+        ))}
+      </div>
+
+      <Btn icon={Plus} onClick={() => setShowForm(!showForm)} className="mb-5">
+        {showForm ? "Cancel" : "Add application"}
+      </Btn>
+
+      {showForm && (
+        <Card className="p-5 mb-6">
+          <div className="grid sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Job title</label>
+              <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="e.g. Front Desk Supervisor" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Company</label>
+              <input value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Company name" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Location</label>
+              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Doha, Qatar" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Status</label>
+              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm bg-white">
+                {TRACKER_STATUSES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Notes (optional)</label>
+          <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} placeholder="Recruiter contact, interview date, next steps…" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm mb-4" />
+          <Btn onClick={addItem}>Save application</Btn>
+        </Card>
+      )}
+
+      {items.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-sm" style={{ color: C.inkSoft }}>No applications tracked yet. Add your first one above.</p>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {items.map((it) => {
+            const statusInfo = TRACKER_STATUSES.find((s) => s.id === it.status) || TRACKER_STATUSES[0];
+            return (
+              <Card key={it.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm" style={{ color: C.ink }}>{it.role}</div>
+                    <div className="text-xs mt-0.5" style={{ color: C.inkFaint }}>
+                      {it.company}{it.location ? ` · ${it.location}` : ""} · {it.date}
+                    </div>
+                    {it.notes && <p className="text-xs mt-2" style={{ color: C.inkSoft }}>{it.notes}</p>}
+                  </div>
+                  <button onClick={() => removeItem(it.id)} className="shrink-0 p-1.5 rounded-lg hover:opacity-70" aria-label="Remove">
+                    <X size={15} style={{ color: C.inkFaint }} />
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {TRACKER_STATUSES.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => updateStatus(it.id, s.id)}
+                      style={{
+                        background: it.status === s.id ? { neutral: C.accentSoft, good: C.successBg, warn: C.warningBg, bad: C.dangerBg }[s.tone] : C.bg,
+                        color: it.status === s.id ? { neutral: C.accentDeep, good: C.success, warn: C.warning, bad: C.danger }[s.tone] : C.inkFaint,
+                        border: `1px solid ${it.status === s.id ? "transparent" : C.line}`,
+                      }}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="mt-8 text-center">
+        <Btn variant="outline" onClick={() => setView("analyzer")}>Analyze another CV</Btn>
+      </div>
+    </div>
+  );
+}
+
 /* ============================== APP ROOT ============================== */
 export default function TrueCVApp() {
   const [view, setView] = useState("landing");
@@ -1134,6 +1294,7 @@ export default function TrueCVApp() {
       case "signup": return <AuthPage mode="signup" setView={setView} />;
       case "forgot": return <ForgotPassword setView={setView} />;
       case "dashboard": return <Dashboard setView={setView} analysis={analysis} />;
+      case "tracker": return <JobTracker setView={setView} />;
       default: return <Landing setView={setView} />;
     }
   }, [view, analysis, cvInput]);
