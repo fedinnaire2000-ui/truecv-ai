@@ -256,6 +256,20 @@ function Footer({ setView }) {
           </div>
         ))}
         <div>
+          <div className="text-sm font-semibold text-white mb-3">Support</div>
+          <div className="flex flex-col gap-2">
+            <a
+              href="https://wa.me/21621918127?text=Hi%2C%20I%20have%20a%20question%20about%20TrueCV%20AI"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm"
+              style={{ color: "#8FA0C2" }}
+            >
+              WhatsApp us
+            </a>
+          </div>
+        </div>
+        <div>
           <div className="text-sm font-semibold text-white mb-3">Legal</div>
           <p className="text-sm leading-relaxed" style={{ color: "#8FA0C2" }}>TrueCV AI provides suggestions only and does not guarantee interviews, ATS outcomes, or employment.</p>
         </div>
@@ -1622,6 +1636,16 @@ export default function TrueCVApp() {
       <Nav view={view} setView={setView} />
       {page}
       <Footer setView={setView} />
+      <a
+        href="https://wa.me/21621918127?text=Hi%2C%20I%20have%20a%20question%20about%20TrueCV%20AI"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Contact us on WhatsApp"
+        style={{ background: "#25D366", boxShadow: "0 8px 20px rgba(0,0,0,0.2)" }}
+        className="fixed bottom-5 right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform"
+      >
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="#fff"><path d="M16.001 3C9.373 3 4 8.373 4 15c0 2.386.7 4.607 1.902 6.474L4 29l7.727-1.867A11.94 11.94 0 0 0 16.001 27C22.629 27 28 21.627 28 15S22.629 3 16.001 3zm0 21.818c-1.93 0-3.727-.55-5.25-1.5l-.377-.223-4.59 1.109 1.127-4.47-.246-.393A9.77 9.77 0 0 1 5.182 15c0-5.964 4.855-10.818 10.819-10.818S26.818 9.036 26.818 15 21.965 24.818 16.001 24.818zm5.964-8.19c-.327-.163-1.936-.955-2.236-1.064-.3-.109-.518-.163-.736.164-.218.327-.845 1.064-1.036 1.282-.191.218-.382.245-.709.082-.327-.164-1.38-.509-2.63-1.622-.972-.867-1.628-1.937-1.82-2.264-.191-.327-.02-.504.144-.667.148-.147.327-.382.49-.573.164-.191.218-.327.327-.545.109-.218.055-.409-.027-.573-.082-.164-.736-1.773-1.009-2.427-.266-.64-.536-.553-.736-.563l-.627-.011c-.218 0-.573.082-.873.409-.3.327-1.145 1.118-1.145 2.727 0 1.609 1.173 3.164 1.336 3.382.164.218 2.309 3.527 5.596 4.945.782.338 1.393.54 1.869.691.785.25 1.5.215 2.065.13.63-.094 1.936-.792 2.209-1.556.273-.764.273-1.418.191-1.556-.082-.137-.3-.218-.627-.382z"/></svg>
+      </a>
     </div>
   );
 }
