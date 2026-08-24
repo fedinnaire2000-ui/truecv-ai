@@ -690,6 +690,7 @@ function Results({ analysis, setView, cvInput }) {
         <div className="flex flex-col gap-2 w-full sm:w-auto">
           <Btn icon={PenLine} onClick={() => setView("improve")}>Improve My CV</Btn>
           <Btn variant="outline" icon={Mail} onClick={() => setView("coverletter")}>Generate Cover Letter</Btn>
+          <Btn variant="outline" icon={ShieldCheck} onClick={() => setView("interview")}>Prepare for Interview</Btn>
         </div>
       </Card>
 
@@ -1386,6 +1387,95 @@ function SalaryInsights({ setView }) {
   );
 }
 
+/* ============================== INTERVIEW PREP ============================== */
+const COMMON_QUESTIONS = [
+  "Tell me about yourself.",
+  "Why do you want to work here?",
+  "What are your greatest strengths?",
+  "What is a weakness you're working on?",
+  "Describe a challenge you faced at work and how you handled it.",
+  "Where do you see yourself in five years?",
+  "Why are you leaving your current role?",
+  "How do you handle pressure or tight deadlines?",
+];
+const ROLE_QUESTION_BANK = {
+  hospitality: ["How would you handle a difficult or angry guest?", "Describe a time you upsold a product or service.", "How do you stay calm during a busy shift?"],
+  software: ["Walk me through a recent project you're proud of.", "How do you approach debugging a tricky issue?", "How do you keep your skills up to date?"],
+  sales: ["Describe how you'd pitch our product to a new client.", "Tell me about a sale you lost — what did you learn?", "How do you handle rejection?"],
+  default: ["What relevant experience makes you a strong fit for this role?", "How do you prioritize tasks when everything feels urgent?", "What questions do you have for us?"],
+};
+
+function pickRoleQuestions(jobTitle) {
+  const t = (jobTitle || "").toLowerCase();
+  if (/(waiter|chef|hotel|hospitality|restaurant)/.test(t)) return ROLE_QUESTION_BANK.hospitality;
+  if (/(developer|engineer|software|programmer)/.test(t)) return ROLE_QUESTION_BANK.software;
+  if (/(sales|business development)/.test(t)) return ROLE_QUESTION_BANK.sales;
+  return ROLE_QUESTION_BANK.default;
+}
+
+function InterviewPrep({ analysis, setView }) {
+  const [answers, setAnswers] = useState({});
+  const [revealed, setRevealed] = useState({});
+
+  if (!analysis) return <div className="max-w-2xl mx-auto px-5 py-24 text-center"><Btn onClick={() => setView("analyzer")}>Start an analysis</Btn></div>;
+
+  const questions = [...COMMON_QUESTIONS.slice(0, 5), ...pickRoleQuestions(analysis.jobTitle)];
+
+  function tip(q) {
+    if (/yourself/i.test(q)) return "Keep it to 60–90 seconds: present role → key experience → why this job.";
+    if (/strength/i.test(q)) return "Pick a strength directly relevant to this role and back it with a brief example.";
+    if (/weakness/i.test(q)) return "Choose a real, minor weakness and show what you're doing to improve it.";
+    if (/why.*here|why.*work here/i.test(q)) return "Connect something specific about the company or role to your own goals.";
+    if (/pressure|deadline/i.test(q)) return "Use a specific example (STAR method): Situation, Task, Action, Result.";
+    if (/leaving/i.test(q)) return "Stay positive — focus on what you're moving toward, not what you're escaping.";
+    if (/five years/i.test(q)) return "Show ambition that aligns with growth paths this company could offer.";
+    return "Use a specific, concrete example rather than a general statement.";
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto px-5 sm:px-8 py-12">
+      <button onClick={() => setView("results")} className="flex items-center gap-1.5 text-sm mb-6" style={{ color: C.inkSoft }}>
+        <ArrowLeft size={15} /> Back to results
+      </button>
+      <Badge>Practice before the real thing</Badge>
+      <h1 className="tc-serif text-3xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>Interview Preparation</h1>
+      <p className="text-sm mb-8 max-w-lg" style={{ color: C.inkSoft }}>Likely questions for {analysis.jobTitle}, with tips for each. Write a draft answer for practice — nothing is saved or sent anywhere.</p>
+
+      <div className="space-y-4">
+        {questions.map((q, i) => (
+          <Card key={i} className="p-5">
+            <div className="flex items-start gap-3 mb-3">
+              <div style={{ background: C.accentSoft, color: C.accent }} className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0">{i + 1}</div>
+              <p className="text-sm font-semibold" style={{ color: C.ink }}>{q}</p>
+            </div>
+            <textarea
+              value={answers[i] || ""}
+              onChange={(e) => setAnswers({ ...answers, [i]: e.target.value })}
+              placeholder="Draft your answer here…"
+              rows={3}
+              style={{ borderColor: C.line }}
+              className="w-full rounded-lg border p-2.5 text-sm mb-2"
+            />
+            <button onClick={() => setRevealed({ ...revealed, [i]: !revealed[i] })} className="text-xs font-semibold" style={{ color: C.accent }}>
+              {revealed[i] ? "Hide tip" : "Show tip"}
+            </button>
+            {revealed[i] && (
+              <div style={{ background: C.accentSoft, color: C.accentDeep }} className="rounded-lg p-3 mt-2 text-xs leading-relaxed">
+                {tip(q)}
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+
+      <div className="mt-8 flex flex-wrap gap-3 justify-center">
+        <Btn variant="outline" onClick={() => setView("results")}>Back to results</Btn>
+        <Btn onClick={() => setView("tracker")}>Track this application</Btn>
+      </div>
+    </div>
+  );
+}
+
 /* ============================== APP ROOT ============================== */
 export default function TrueCVApp() {
   const [view, setView] = useState("landing");
@@ -1405,6 +1495,7 @@ export default function TrueCVApp() {
       case "dashboard": return <Dashboard setView={setView} analysis={analysis} />;
       case "tracker": return <JobTracker setView={setView} />;
       case "salary": return <SalaryInsights setView={setView} />;
+      case "interview": return <InterviewPrep analysis={analysis} setView={setView} />;
       default: return <Landing setView={setView} />;
     }
   }, [view, analysis, cvInput]);
