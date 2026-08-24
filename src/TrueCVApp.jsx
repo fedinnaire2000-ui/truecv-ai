@@ -738,6 +738,53 @@ function Results({ analysis, setView, cvInput }) {
   );
 }
 
+/* ============================== PDF EXPORT ============================== */
+function downloadTextAsPdf({ title, paragraphs, filename }) {
+  const jsPDFCtor = window.jspdf && window.jspdf.jsPDF;
+  if (!jsPDFCtor) {
+    alert("PDF library is still loading — please try again in a moment.");
+    return;
+  }
+  const doc = new jsPDFCtor({ unit: "pt", format: "a4" });
+  const marginX = 56;
+  let y = 64;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const maxWidth = doc.internal.pageSize.getWidth() - marginX * 2;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(16, 24, 38);
+  doc.text(title, marginX, y);
+  y += 28;
+
+  doc.setDrawColor(230, 234, 241);
+  doc.line(marginX, y, marginX + maxWidth, y);
+  y += 24;
+
+  paragraphs.forEach(({ heading, body }) => {
+    if (heading) {
+      if (y > pageHeight - 80) { doc.addPage(); y = 64; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(46, 90, 172);
+      doc.text(heading.toUpperCase(), marginX, y);
+      y += 18;
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(30, 38, 52);
+    const lines = doc.splitTextToSize(body || "", maxWidth);
+    lines.forEach((line) => {
+      if (y > pageHeight - 60) { doc.addPage(); y = 64; }
+      doc.text(line, marginX, y);
+      y += 16;
+    });
+    y += 14;
+  });
+
+  doc.save(filename);
+}
+
 /* ============================== IMPROVE CV ============================== */
 function ImproveCV({ analysis, cvInput, setView }) {
   const [accepted, setAccepted] = useState(false);
@@ -783,7 +830,24 @@ function ImproveCV({ analysis, cvInput, setView }) {
         <label htmlFor="review" className="text-sm" style={{ color: C.inkSoft }}>I reviewed the changes and confirm all content remains accurate.</label>
       </div>
       <div className="flex flex-wrap gap-3">
-        <Btn icon={Download} disabled={!accepted} onClick={() => alert("Demo: PDF export requires connecting a PDF-generation backend.")}>Download Improved CV (PDF)</Btn>
+        <Btn
+          icon={Download}
+          disabled={!accepted}
+          onClick={() =>
+            downloadTextAsPdf({
+              title: `Improved CV — ${analysis.jobTitle}`,
+              filename: `improved-cv-${(analysis.jobTitle || "role").toLowerCase().replace(/\s+/g, "-")}.pdf`,
+              paragraphs: [
+                { heading: "Professional summary", body: improved.summary },
+                improved.addedSkillsLine && { heading: "Relevant skills to highlight", body: improved.addedSkillsLine },
+                { heading: "Suggested keywords (add only if truthful)", body: improved.keywordLine },
+                { heading: "Original CV content", body: cvInput || "No original CV content provided." },
+              ].filter(Boolean),
+            })
+          }
+        >
+          Download Improved CV (PDF)
+        </Btn>
         <Btn variant="outline" icon={Mail} onClick={() => setView("coverletter")}>Generate Cover Letter</Btn>
       </div>
     </div>
@@ -851,7 +915,18 @@ ${name || "[Your name]"}`;
         <Card className="p-6">
           <pre className="whitespace-pre-wrap text-sm leading-relaxed" style={{ color: C.ink, fontFamily: "inherit" }}>{letter}</pre>
           <div className="mt-6 flex gap-3">
-            <Btn icon={Download} onClick={() => alert("Demo: PDF export requires connecting a PDF-generation backend.")}>Download as PDF</Btn>
+            <Btn
+              icon={Download}
+              onClick={() =>
+                downloadTextAsPdf({
+                  title: `Cover Letter — ${analysis.jobTitle}`,
+                  filename: `cover-letter-${(analysis.jobTitle || "role").toLowerCase().replace(/\s+/g, "-")}.pdf`,
+                  paragraphs: [{ body: letter }],
+                })
+              }
+            >
+              Download as PDF
+            </Btn>
           </div>
         </Card>
       )}
