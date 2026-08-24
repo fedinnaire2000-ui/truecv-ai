@@ -186,6 +186,7 @@ function Nav({ view, setView }) {
     { id: "analyzer", label: "Analyze CV" },
     { id: "tracker", label: "Job Tracker" },
     { id: "salary", label: "Salary Insights" },
+    { id: "toolkit", label: "Relocation Toolkit" },
     { id: "pricing", label: "Pricing" },
   ];
   return (
@@ -1476,6 +1477,120 @@ function InterviewPrep({ analysis, setView }) {
   );
 }
 
+/* ============================== RELOCATION TOOLKIT ============================== */
+const UNIVERSAL_CHECKLIST = [
+  "Valid passport with at least 6 months validity remaining",
+  "Signed job offer letter or employment contract",
+  "Educational certificates (originals + copies)",
+  "Professional certifications relevant to your role",
+  "Updated CV and portfolio (if applicable)",
+  "Passport-sized photos (check destination's exact spec)",
+  "Bank statements or proof of funds (some countries require this)",
+  "Medical fitness / health check certificate",
+  "Certificate of Good Conduct / police clearance certificate",
+];
+
+const COUNTRY_NOTES = {
+  "qatar": ["Work visa (RP) is usually sponsored by the employer.", "Certificate attestation required from your home country's foreign ministry and the Qatari embassy.", "Medical test done locally after arrival for residency permit."],
+  "united arab emirates": ["Educational certificates must be attested (home country + UAE embassy, then MOFA in UAE).", "Employer typically handles the work permit and Emirates ID process.", "Some professions require Ministry of Health license (healthcare, education)."],
+  "uae": ["Educational certificates must be attested (home country + UAE embassy, then MOFA in UAE).", "Employer typically handles the work permit and Emirates ID process.", "Some professions require Ministry of Health license (healthcare, education)."],
+  "saudi arabia": ["Certificate attestation from Saudi embassy is mandatory before entry.", "A local sponsor (Kafeel) — usually your employer — is required for the work visa.", "Medical exam (GAMCA) required before visa issuance."],
+  "kuwait": ["Certificate attestation required at the Kuwaiti embassy.", "Employer sponsors the work permit (Iqama).", "Pre-employment medical test typically required."],
+  "bahrain": ["Attestation of degree certificates recommended before travel.", "Work permit is employer-sponsored via LMRA.", "Medical fitness test required for residency."],
+  "oman": ["Certificate attestation from the Omani embassy required.", "Employer handles labour card and residency card (Iqama) processing.", "No Objection Certificate (NOC) may apply if switching employers within Oman."],
+  "france": ["EU/EEA citizens don't need a work visa; non-EU citizens need a 'passeport talent' or standard work visa.", "Degree recognition (equivalence) may be required for regulated professions.", "Employer usually initiates the work permit application."],
+  "germany": ["Non-EU citizens typically need a Blue Card or work visa tied to a job offer.", "Degree recognition via 'Anerkennung' may be required, especially for regulated fields.", "Health insurance registration is mandatory soon after arrival."],
+  "united kingdom": ["A Skilled Worker visa requires employer sponsorship (Certificate of Sponsorship).", "Minimum salary thresholds apply depending on the role.", "IELTS or equivalent English test may be required."],
+  "uk": ["A Skilled Worker visa requires employer sponsorship (Certificate of Sponsorship).", "Minimum salary thresholds apply depending on the role.", "IELTS or equivalent English test may be required."],
+  "united states": ["Most work visas (H-1B, L-1, etc.) require employer sponsorship and are subject to annual caps/lotteries.", "Credential evaluation (e.g. via WES) may be required for some professions.", "Processing times can be long — start early."],
+  "usa": ["Most work visas (H-1B, L-1, etc.) require employer sponsorship and are subject to annual caps/lotteries.", "Credential evaluation (e.g. via WES) may be required for some professions.", "Processing times can be long — start early."],
+  "canada": ["Express Entry or employer-specific work permits are common routes.", "Educational Credential Assessment (ECA) often required for skilled worker programs.", "Language test (IELTS/TEF) usually required."],
+};
+
+function findCountryNotes(country) {
+  const c = (country || "").toLowerCase().trim();
+  if (!c) return null;
+  for (const key in COUNTRY_NOTES) {
+    if (c.includes(key) || key.includes(c)) return COUNTRY_NOTES[key];
+  }
+  return [];
+}
+
+function RelocationToolkit({ setView }) {
+  const [country, setCountry] = useState("");
+  const [checked, setChecked] = useState({});
+  const [searched, setSearched] = useState(false);
+  const [notes, setNotes] = useState([]);
+
+  function search() {
+    setNotes(findCountryNotes(country) || []);
+    setSearched(true);
+  }
+  function toggle(key) {
+    setChecked({ ...checked, [key]: !checked[key] });
+  }
+  const doneCount = Object.values(checked).filter(Boolean).length;
+
+  return (
+    <div className="max-w-3xl mx-auto px-5 sm:px-8 py-12">
+      <Badge>For international job seekers</Badge>
+      <h1 className="tc-serif text-3xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>Relocation Toolkit</h1>
+      <p className="text-sm mb-8 max-w-lg" style={{ color: C.inkSoft }}>A general checklist for documents and steps commonly needed when relocating for work abroad, with notes for popular destinations.</p>
+
+      <Card className="p-5 mb-6">
+        <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Destination country</label>
+        <div className="flex gap-2">
+          <input value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. Qatar, Germany, Canada…" style={{ borderColor: C.line }} className="flex-1 rounded-lg border p-2.5 text-sm" />
+          <Btn onClick={search}>Search</Btn>
+        </div>
+      </Card>
+
+      {searched && (
+        <Card className="p-5 mb-6">
+          <div className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: C.inkFaint }}>
+            {notes.length > 0 ? `Notes for ${country}` : `No specific notes for "${country}" yet`}
+          </div>
+          {notes.length > 0 ? (
+            <ul className="space-y-2">
+              {notes.map((n, i) => (
+                <li key={i} className="flex gap-2 text-sm" style={{ color: C.inkSoft }}>
+                  <ArrowRight size={14} className="mt-1 shrink-0" style={{ color: C.accent }} />{n}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm" style={{ color: C.inkSoft }}>Use the universal checklist below, and always confirm exact requirements with the destination country's embassy or your employer's HR/immigration team.</p>
+          )}
+        </Card>
+      )}
+
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkFaint }}>Universal checklist</div>
+        <Badge tone={doneCount === UNIVERSAL_CHECKLIST.length ? "good" : "neutral"}>{doneCount}/{UNIVERSAL_CHECKLIST.length} done</Badge>
+      </div>
+      <Card className="p-5 mb-6">
+        <div className="space-y-3">
+          {UNIVERSAL_CHECKLIST.map((item, i) => (
+            <label key={i} className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" checked={!!checked[i]} onChange={() => toggle(i)} className="w-4 h-4 mt-0.5 shrink-0" />
+              <span className="text-sm" style={{ color: checked[i] ? C.inkFaint : C.inkSoft, textDecoration: checked[i] ? "line-through" : "none" }}>{item}</span>
+            </label>
+          ))}
+        </div>
+      </Card>
+
+      <div style={{ background: C.warningBg, border: "1px solid #F0DBA8" }} className="rounded-xl p-4 flex gap-3 items-start text-sm mb-6">
+        <AlertTriangle size={16} style={{ color: C.warning }} className="mt-0.5 shrink-0" />
+        <span style={{ color: "#8A5A0A" }}>Requirements change frequently and vary by nationality, profession, and employer. Always verify current requirements with the official embassy, consulate, or your employer's HR team before traveling.</span>
+      </div>
+
+      <div className="text-center">
+        <Btn variant="outline" onClick={() => setView("analyzer")}>Analyze your CV</Btn>
+      </div>
+    </div>
+  );
+}
+
 /* ============================== APP ROOT ============================== */
 export default function TrueCVApp() {
   const [view, setView] = useState("landing");
@@ -1496,6 +1611,7 @@ export default function TrueCVApp() {
       case "tracker": return <JobTracker setView={setView} />;
       case "salary": return <SalaryInsights setView={setView} />;
       case "interview": return <InterviewPrep analysis={analysis} setView={setView} />;
+      case "toolkit": return <RelocationToolkit setView={setView} />;
       default: return <Landing setView={setView} />;
     }
   }, [view, analysis, cvInput]);
