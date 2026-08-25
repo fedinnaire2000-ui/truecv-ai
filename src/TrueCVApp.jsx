@@ -275,7 +275,7 @@ function Footer({ setView }) {
           <p className="text-sm mt-3 leading-relaxed" style={{ color: "#8FA0C2" }}>Make your CV job-ready — tailored to every application.</p>
         </div>
         {[
-          { title: "Product", items: [["Analyze CV", "analyzer"], ["Pricing", "pricing"], ["How it works", "landing"]] },
+          { title: "Product", items: [["Analyze CV", "analyzer"], ["Pricing", "pricing"], ["About", "about"]] },
           { title: "Account", items: [["Log in", "login"], ["Sign up", "signup"], ["Dashboard", "dashboard"]] },
         ].map((col) => (
           <div key={col.title}>
@@ -303,11 +303,14 @@ function Footer({ setView }) {
         </div>
         <div>
           <div className="text-sm font-semibold text-white mb-3">Legal</div>
-          <p className="text-sm leading-relaxed" style={{ color: "#8FA0C2" }}>TrueCV AI provides suggestions only and does not guarantee interviews, ATS outcomes, or employment.</p>
+          <div className="flex flex-col gap-2">
+            <button onClick={() => setView("privacy")} className="text-sm text-left" style={{ color: "#8FA0C2" }}>Privacy Policy</button>
+            <button onClick={() => setView("terms")} className="text-sm text-left" style={{ color: "#8FA0C2" }}>Terms of Service</button>
+          </div>
         </div>
       </div>
       <div className="max-w-6xl mx-auto px-5 sm:px-8 py-5 text-xs flex justify-between" style={{ borderTop: "1px solid #22304F", color: "#6B7D9F" }}>
-        <span>© 2026 TrueCV AI. Demo product.</span>
+        <span>© 2026 TrueCV AI.</span>
         <span>English · Français · العربية</span>
       </div>
     </footer>
@@ -1637,6 +1640,66 @@ function RelocationToolkit({ setView }) {
   );
 }
 
+/* ============================== STATIC PAGES ============================== */
+function StaticPage({ title, updated, children, setView }) {
+  return (
+    <div className="max-w-3xl mx-auto px-5 sm:px-8 py-14">
+      <h1 className="tc-serif text-3xl font-semibold mb-2" style={{ color: C.ink }}>{title}</h1>
+      {updated && <p className="text-xs mb-8" style={{ color: C.inkFaint }}>Last updated: {updated}</p>}
+      <div className="space-y-5 text-sm leading-relaxed" style={{ color: C.inkSoft }}>{children}</div>
+      <div className="mt-10">
+        <Btn variant="outline" onClick={() => setView("landing")}>Back to home</Btn>
+      </div>
+    </div>
+  );
+}
+
+function PrivacyPolicy({ setView }) {
+  return (
+    <StaticPage title="Privacy Policy" updated="August 2026" setView={setView}>
+      <p>TrueCV AI ("we", "our", "us") respects your privacy. This policy explains what information we collect and how we use it.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Information we collect</h3>
+      <p>When you use our CV analysis tools, the text you submit (CV content, job descriptions) is processed to generate results. Job Tracker and checklist data you enter is stored locally in your browser and is not sent to our servers.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>How we use information</h3>
+      <p>Submitted content is used solely to generate the analysis, suggestions, or documents you request. We do not sell your personal information to third parties.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Cookies and analytics</h3>
+      <p>We may use basic analytics to understand site usage and improve the product. These do not identify you personally.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Your rights</h3>
+      <p>You can contact us at any time to ask what data we hold about you or to request deletion, using the WhatsApp contact link in the footer.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Changes to this policy</h3>
+      <p>We may update this policy as the product evolves. Continued use of the site after changes means you accept the updated policy.</p>
+    </StaticPage>
+  );
+}
+
+function TermsOfService({ setView }) {
+  return (
+    <StaticPage title="Terms of Service" updated="August 2026" setView={setView}>
+      <p>By using TrueCV AI, you agree to the following terms.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Use of the service</h3>
+      <p>TrueCV AI provides CV analysis, writing suggestions, and related career tools. Results are AI-generated estimates intended to help you improve your application materials — they are not guarantees of interviews, ATS outcomes, salary, or employment.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Your responsibilities</h3>
+      <p>You are responsible for the accuracy of content you submit and for reviewing any AI-generated suggestions before using them. Do not submit false information or content you don't have rights to.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Subscriptions and payments</h3>
+      <p>Paid plans, when available, are billed as described at checkout. You may cancel at any time; refunds are handled on a case-by-case basis via our support contact.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Limitation of liability</h3>
+      <p>TrueCV AI is provided "as is". We are not liable for employment decisions, missed opportunities, or damages resulting from use of the service.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Changes</h3>
+      <p>We may update these terms as the product evolves. Continued use of the site means you accept the current terms.</p>
+    </StaticPage>
+  );
+}
+
+function AboutUs({ setView }) {
+  return (
+    <StaticPage title="About TrueCV AI" setView={setView}>
+      <p>TrueCV AI was built to help job seekers — especially those applying across borders, from the MENA region to the Gulf, Europe, and beyond — put their best CV forward.</p>
+      <p>Job hunting internationally comes with extra friction: ATS systems that filter CVs before a human ever sees them, unfamiliar formatting expectations, and confusing relocation paperwork. TrueCV AI brings CV analysis, cover letter generation, salary insights, interview preparation, and a relocation checklist together in one place, so you don't have to piece together advice from a dozen different sources.</p>
+      <p>We're just getting started, and we're building this in the open — improving it step by step based on real feedback from people actually applying for jobs. If you have suggestions or run into an issue, reach out any time via WhatsApp using the button on this site.</p>
+    </StaticPage>
+  );
+}
+
 /* ============================== APP ROOT ============================== */
 export default function TrueCVApp() {
   const [view, setView] = useState("landing");
@@ -1658,6 +1721,9 @@ export default function TrueCVApp() {
       case "salary": return <SalaryInsights setView={setView} />;
       case "interview": return <InterviewPrep analysis={analysis} setView={setView} />;
       case "toolkit": return <RelocationToolkit setView={setView} />;
+      case "privacy": return <PrivacyPolicy setView={setView} />;
+      case "terms": return <TermsOfService setView={setView} />;
+      case "about": return <AboutUs setView={setView} />;
       default: return <Landing setView={setView} />;
     }
   }, [view, analysis, cvInput]);
