@@ -222,12 +222,44 @@ function Nav({ view, setView }) {
         </button>
       </div>
       {open && (
-        <div className="md:hidden px-5 pb-4 flex flex-col gap-1" style={{ borderTop: `1px solid ${C.line}` }}>
-          {[...links, { id: "login", label: "Log in" }, { id: "dashboard", label: "Dashboard (demo)" }].map((l) => (
-            <button key={l.id} onClick={() => { setView(l.id); setOpen(false); }} className="text-left py-2.5 text-sm font-medium" style={{ color: C.inkSoft }}>
+        <div className="md:hidden px-5 pb-6 pt-2" style={{ borderTop: `1px solid ${C.line}` }}>
+          <div className="text-xs font-semibold uppercase tracking-wide mt-4 mb-1" style={{ color: C.inkFaint }}>Tools</div>
+          {[
+            { id: "analyzer", label: "Analyze CV" },
+            { id: "tracker", label: "Job Tracker" },
+            { id: "salary", label: "Salary Insights" },
+            { id: "interview", label: "Interview Prep" },
+            { id: "toolkit", label: "Relocation Toolkit" },
+          ].map((l) => (
+            <button key={l.id} onClick={() => { setView(l.id); setOpen(false); }} className="w-full text-left py-2.5 text-sm font-medium" style={{ color: view === l.id ? C.accent : C.ink }}>
               {l.label}
             </button>
           ))}
+
+          <div className="text-xs font-semibold uppercase tracking-wide mt-5 mb-1" style={{ color: C.inkFaint }}>Account</div>
+          {[
+            { id: "login", label: "Log in" },
+            { id: "signup", label: "Sign up" },
+            { id: "dashboard", label: "Dashboard" },
+          ].map((l) => (
+            <button key={l.id} onClick={() => { setView(l.id); setOpen(false); }} className="w-full text-left py-2.5 text-sm font-medium" style={{ color: view === l.id ? C.accent : C.ink }}>
+              {l.label}
+            </button>
+          ))}
+
+          <div style={{ borderTop: `1px solid ${C.line}` }} className="mt-4 pt-4">
+            <button onClick={() => { setView("pricing"); setOpen(false); }} className="w-full text-left py-2.5 text-sm font-semibold" style={{ color: view === "pricing" ? C.accent : C.ink }}>
+              Pricing
+            </button>
+            <button onClick={() => { setView("landing"); setOpen(false); }} className="w-full text-left py-2.5 text-sm font-semibold" style={{ color: view === "landing" ? C.accent : C.ink }}>
+              Home
+            </button>
+          </div>
+
+          <div className="mt-5 flex gap-2">
+            <Btn variant="outline" className="flex-1" onClick={() => { setView("login"); setOpen(false); }}>Log in</Btn>
+            <Btn className="flex-1" icon={Sparkles} onClick={() => { setView("analyzer"); setOpen(false); }}>Analyze My CV</Btn>
+          </div>
         </div>
       )}
     </header>
