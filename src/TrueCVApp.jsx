@@ -340,6 +340,7 @@ function Footer({ setView }) {
           <div className="flex flex-col gap-2">
             <button onClick={() => setView("privacy")} className="text-sm text-left" style={{ color: "#8FA0C2" }}>Privacy Policy</button>
             <button onClick={() => setView("terms")} className="text-sm text-left" style={{ color: "#8FA0C2" }}>Terms of Service</button>
+            <button onClick={() => setView("refund")} className="text-sm text-left" style={{ color: "#8FA0C2" }}>Refund Policy</button>
           </div>
         </div>
       </div>
@@ -1882,6 +1883,24 @@ function TermsOfService({ setView }) {
   );
 }
 
+function RefundPolicy({ setView }) {
+  return (
+    <StaticPage title="Refund Policy" updated="August 2026" setView={setView}>
+      <p>We want you to be satisfied with TrueCV AI. This policy explains how refunds work for paid subscriptions (Pro and Career Package).</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>14-day money-back guarantee</h3>
+      <p>If you're not happy with your subscription, you can request a full refund within 14 days of your initial purchase, no questions asked.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>How to request a refund</h3>
+      <p>Contact us via the WhatsApp button available on every page of the site, or through the payment receipt sent by our payment provider, Paddle. Include your order/transaction reference so we can locate your payment quickly.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Processing time</h3>
+      <p>Approved refunds are typically processed within 5–10 business days, depending on your bank or card issuer.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Subscription cancellations</h3>
+      <p>You can cancel your subscription at any time to stop future billing. Cancelling does not automatically trigger a refund for the current billing period unless it falls within the 14-day window above.</p>
+      <h3 className="font-semibold" style={{ color: C.ink }}>Payment processor</h3>
+      <p>All payments are processed securely by Paddle.com Market Ltd, our payments and Merchant of Record provider. Paddle may also handle certain refund requests directly in accordance with their own policies.</p>
+    </StaticPage>
+  );
+}
+
 function AboutUs({ setView }) {
   return (
     <StaticPage title="About TrueCV AI" setView={setView}>
@@ -1915,6 +1934,7 @@ export default function TrueCVApp() {
       case "toolkit": return <RelocationToolkit setView={setView} />;
       case "privacy": return <PrivacyPolicy setView={setView} />;
       case "terms": return <TermsOfService setView={setView} />;
+      case "refund": return <RefundPolicy setView={setView} />;
       case "about": return <AboutUs setView={setView} />;
       default: return <Landing setView={setView} />;
     }
