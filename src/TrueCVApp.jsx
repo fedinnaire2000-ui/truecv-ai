@@ -1974,12 +1974,37 @@ function AboutUs({ setView }) {
 }
 
 /* ============================== APP ROOT ============================== */
+const PATH_VIEWS = {
+  "/": "landing",
+  "/pricing": "pricing",
+  "/terms": "terms",
+  "/privacy": "privacy",
+  "/refund": "refund",
+  "/about": "about",
+};
+const VIEW_PATHS = Object.fromEntries(Object.entries(PATH_VIEWS).map(([k, v]) => [v, k]));
+
 export default function TrueCVApp() {
-  const [view, setView] = useState("landing");
+  const [view, setViewRaw] = useState(() => PATH_VIEWS[window.location.pathname] || "landing");
   const [analysis, setAnalysis] = useState(null);
   const [cvInput, setCvInput] = useState("");
   const [session, setSession] = useState(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+
+  function setView(v) {
+    setViewRaw(v);
+    const path = VIEW_PATHS[v] || "/";
+    if (window.location.pathname !== path) window.history.pushState({}, "", path);
+    window.scrollTo(0, 0);
+  }
+
+  React.useEffect(() => {
+    function onPopState() {
+      setViewRaw(PATH_VIEWS[window.location.pathname] || "landing");
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
