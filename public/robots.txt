@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://truecvai-red.vercel.app/sitemap.xml
