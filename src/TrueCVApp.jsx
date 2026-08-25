@@ -181,14 +181,19 @@ function Card({ children, className = "", style = {} }) {
 /* ============================== NAV ============================== */
 function Nav({ view, setView }) {
   const [open, setOpen] = useState(false);
-  const links = [
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const toolLinks = [
+    { id: "analyzer", label: "Analyze CV", desc: "Score your CV against a job description" },
+    { id: "tracker", label: "Job Tracker", desc: "Track applications, interviews, offers" },
+    { id: "salary", label: "Salary Insights", desc: "Estimate a fair salary range" },
+    { id: "interview", label: "Interview Prep", desc: "Practice likely interview questions" },
+    { id: "toolkit", label: "Relocation Toolkit", desc: "Checklist for working abroad" },
+  ];
+  const topLinks = [
     { id: "landing", label: "Home" },
-    { id: "analyzer", label: "Analyze CV" },
-    { id: "tracker", label: "Job Tracker" },
-    { id: "salary", label: "Salary Insights" },
-    { id: "toolkit", label: "Relocation Toolkit" },
     { id: "pricing", label: "Pricing" },
   ];
+  const isToolView = toolLinks.some((t) => t.id === view);
   return (
     <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(251,252,254,0.9)", backdropFilter: "blur(8px)" }} className="sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
@@ -199,17 +204,46 @@ function Nav({ view, setView }) {
           <span className="tc-serif font-semibold text-lg" style={{ color: C.ink }}>TrueCV <span style={{ color: C.accent }}>AI</span></span>
         </button>
 
-        <nav className="hidden md:flex items-center gap-1">
-          {links.map((l) => (
+        <nav className="hidden md:flex items-center gap-1 relative">
+          <button
+            onClick={() => setView("landing")}
+            style={{ color: view === "landing" ? C.ink : C.inkSoft, background: view === "landing" ? C.accentSoft : "transparent" }}
+            className="px-3.5 py-2 rounded-full text-sm font-medium transition-colors"
+          >
+            Home
+          </button>
+
+          <div onMouseEnter={() => setToolsOpen(true)} onMouseLeave={() => setToolsOpen(false)} className="relative">
             <button
-              key={l.id}
-              onClick={() => setView(l.id)}
-              style={{ color: view === l.id ? C.ink : C.inkSoft, background: view === l.id ? C.accentSoft : "transparent" }}
-              className="px-3.5 py-2 rounded-full text-sm font-medium transition-colors"
+              onClick={() => setToolsOpen(!toolsOpen)}
+              style={{ color: isToolView ? C.ink : C.inkSoft, background: isToolView ? C.accentSoft : "transparent" }}
+              className="px-3.5 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1"
             >
-              {l.label}
+              Tools <ChevronDown size={13} style={{ transform: toolsOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
             </button>
-          ))}
+            {toolsOpen && (
+              <div style={{ background: C.surface, border: `1px solid ${C.line}` }} className="absolute top-full left-0 mt-1 w-72 rounded-2xl shadow-xl p-2 z-50">
+                {toolLinks.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => { setView(t.id); setToolsOpen(false); }}
+                    className="w-full text-left px-3.5 py-2.5 rounded-xl hover:bg-black/[0.03] block"
+                  >
+                    <div className="text-sm font-semibold" style={{ color: view === t.id ? C.accent : C.ink }}>{t.label}</div>
+                    <div className="text-xs mt-0.5" style={{ color: C.inkFaint }}>{t.desc}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => setView("pricing")}
+            style={{ color: view === "pricing" ? C.ink : C.inkSoft, background: view === "pricing" ? C.accentSoft : "transparent" }}
+            className="px-3.5 py-2 rounded-full text-sm font-medium transition-colors"
+          >
+            Pricing
+          </button>
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
@@ -401,6 +435,72 @@ function ScoreExample() {
   );
 }
 
+function BeforeAfterExamples() {
+  const [active, setActive] = useState(0);
+  const examples = [
+    {
+      role: "Hospitality Supervisor",
+      job: "Applied to: Front Desk Supervisor, Doha",
+      before: "Responsible for various tasks at the front desk. Dealt with guests and handled daily operations.",
+      after: "Managed front desk operations for a 200-room property, leading a team of 6 while resolving guest issues that lifted satisfaction scores. Trained new hires on Opera PMS and check-in/checkout procedures.",
+      beforeScore: 41,
+      afterScore: 76,
+    },
+    {
+      role: "Software Developer",
+      job: "Applied to: Frontend Developer, Remote",
+      before: "Worked on web projects using React. Fixed bugs and helped the team.",
+      after: "Built and shipped 4 production React features used by 10k+ monthly users, cutting page load time by 30% through code splitting and reducing reported bugs by 22% via improved test coverage.",
+      beforeScore: 38,
+      afterScore: 81,
+    },
+    {
+      role: "Sales Associate",
+      job: "Applied to: Retail Sales Lead, Dubai",
+      before: "Sold products in a retail store. Helped customers and processed payments.",
+      after: "Consistently ranked top 3 of 15 sales associates, driving 18% year-over-year revenue growth through upselling and building repeat-customer relationships in a high-traffic retail location.",
+      beforeScore: 35,
+      afterScore: 74,
+    },
+  ];
+  const ex = examples[active];
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 mb-6">
+        {examples.map((e, i) => (
+          <button
+            key={e.role}
+            onClick={() => setActive(i)}
+            style={{ background: active === i ? C.accent : C.bg, color: active === i ? "#fff" : C.inkSoft, border: `1px solid ${active === i ? C.accent : C.line}` }}
+            className="px-3.5 py-1.5 rounded-full text-xs font-medium"
+          >
+            {e.role}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs mb-5" style={{ color: C.inkFaint }}>{ex.job}</p>
+      <div className="grid md:grid-cols-2 gap-5">
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: C.inkFaint }}>Before</div>
+            <Badge tone="bad">{ex.beforeScore}/100</Badge>
+          </div>
+          <p className="text-sm leading-relaxed" style={{ color: C.inkSoft }}>{ex.before}</p>
+        </Card>
+        <Card className="p-5" style={{ borderColor: C.success }}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-semibold uppercase tracking-wide flex items-center gap-1.5" style={{ color: C.success }}><Sparkles size={12} /> After TrueCV AI</div>
+            <Badge tone="good">{ex.afterScore}/100</Badge>
+          </div>
+          <p className="text-sm leading-relaxed" style={{ color: C.ink }}>{ex.after}</p>
+        </Card>
+      </div>
+      <p className="text-xs mt-5" style={{ color: C.inkFaint }}>These are illustrative examples built to show the type of rewrite TrueCV AI produces — not real user submissions. Your results depend on your actual CV and the job you're applying to.</p>
+    </div>
+  );
+}
+
 function Landing({ setView }) {
   const steps = [
     { icon: Upload, title: "Upload your CV", copy: "PDF or DOCX — your document stays private and is never shared." },
@@ -493,6 +593,18 @@ function Landing({ setView }) {
           <h2 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>A real example analysis</h2>
         </div>
         <ScoreExample />
+      </section>
+
+      {/* BEFORE / AFTER */}
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
+        <div className="flex items-center justify-between mb-8 gap-3">
+          <div>
+            <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>Before → After</div>
+            <h2 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>What TrueCV AI actually rewrites</h2>
+          </div>
+          <Badge tone="warn">Illustrative examples</Badge>
+        </div>
+        <BeforeAfterExamples />
       </section>
 
       {/* FEATURES */}
