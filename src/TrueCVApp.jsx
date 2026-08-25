@@ -585,13 +585,32 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
 
   function runAnalysis() {
     setLoading(true);
-    setTimeout(() => {
-      const result = mockAnalyze(cvText, jdText, jobTitle);
-      setAnalysis(result);
-      setCvInput(cvText);
-      setLoading(false);
-      setView("results");
-    }, 1100);
+    fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cvText, jdText, jobTitle }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("AI request failed"))))
+      .then((aiResult) => {
+        const merged = {
+          ...aiResult,
+          jobTitle: jobTitle || "this role",
+          structure: tokenize(cvText).length > 400 ? "strong" : tokenize(cvText).length > 150 ? "moderate" : "thin",
+          hasNumbers: /\d/.test(cvText),
+        };
+        setAnalysis(merged);
+        setCvInput(cvText);
+        setLoading(false);
+        setView("results");
+      })
+      .catch(() => {
+        // Fall back to the built-in offline analysis if the AI service is unavailable
+        const result = mockAnalyze(cvText, jdText, jobTitle);
+        setAnalysis(result);
+        setCvInput(cvText);
+        setLoading(false);
+        setView("results");
+      });
   }
 
   return (
