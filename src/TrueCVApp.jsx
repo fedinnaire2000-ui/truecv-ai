@@ -1135,12 +1135,57 @@ ${name || "[Your name]"}`;
 }
 
 /* ============================== PRICING ============================== */
+/* ============================== PADDLE CHECKOUT ============================== */
+const PADDLE_CLIENT_TOKEN = "live_8a10c4d4ec86acb5cbf3d7f284c";
+const PADDLE_PRICE_IDS = {
+  pro: "pri_01m0wbfbksndq26a2e3n9656yh",
+  career: "pri_01m0wbqte7m66z3gn7ycve2vzk",
+};
+let paddleReadyPromise = null;
+
+function ensurePaddleReady() {
+  if (paddleReadyPromise) return paddleReadyPromise;
+  paddleReadyPromise = new Promise((resolve, reject) => {
+    function trySetup() {
+      if (window.Paddle) {
+        try {
+          window.Paddle.Environment.set("production");
+          window.Paddle.Initialize({ token: PADDLE_CLIENT_TOKEN });
+          resolve(window.Paddle);
+        } catch (err) {
+          reject(err);
+        }
+      } else {
+        setTimeout(trySetup, 150);
+      }
+    }
+    trySetup();
+  });
+  return paddleReadyPromise;
+}
+
+function openPaddleCheckout(priceKey) {
+  const priceId = PADDLE_PRICE_IDS[priceKey];
+  ensurePaddleReady()
+    .then((Paddle) => {
+      Paddle.Checkout.open({ items: [{ priceId, quantity: 1 }] });
+    })
+    .catch(() => {
+      alert("Checkout couldn't load right now. Please refresh the page and try again.");
+    });
+}
+
 function PricingGrid({ compact, setView }) {
   const plans = [
     { name: "Free", price: "$0", period: "", features: ["1 CV analysis", "ATS compatibility score", "Basic recommendations"], cta: "Start free", variant: "outline" },
     { name: "Pro", price: "$9.99", period: "/mo", features: ["Unlimited CV analyses", "Advanced ATS analysis", "CV optimization", "Tailored cover letters", "PDF downloads", "Saved analyses"], cta: "Upgrade to Pro", variant: "primary", highlight: true },
     { name: "Career Package", price: "$19.99", period: "/mo", features: ["Everything in Pro", "Multiple CV versions", "Multiple languages", "Interview preparation", "Job application tracking", "Priority AI processing"], cta: "Get Career Package", variant: "dark" },
   ];
+  function handleClick(planName) {
+    if (planName === "Free") return setView("analyzer");
+    if (planName === "Pro") return openPaddleCheckout("pro");
+    if (planName === "Career Package") return openPaddleCheckout("career");
+  }
   return (
     <div className="grid md:grid-cols-3 gap-5">
       {plans.map((p) => (
@@ -1158,7 +1203,7 @@ function PricingGrid({ compact, setView }) {
               </li>
             ))}
           </ul>
-          <Btn variant={p.variant} className="w-full" onClick={() => setView(p.name === "Free" ? "analyzer" : "signup")}>{p.cta}</Btn>
+          <Btn variant={p.variant} className="w-full" onClick={() => handleClick(p.name)}>{p.cta}</Btn>
         </Card>
       ))}
     </div>
@@ -1171,10 +1216,10 @@ function PricingPage({ setView }) {
       <div className="text-center max-w-lg mx-auto mb-10">
         <Badge>Pricing</Badge>
         <h1 className="tc-serif text-4xl font-semibold mt-4" style={{ color: C.ink }}>Simple plans, real results</h1>
-        <p className="mt-3 text-sm" style={{ color: C.inkSoft }}>Prices shown are placeholders and may change. Cancel anytime.</p>
+        <p className="mt-3 text-sm" style={{ color: C.inkSoft }}>Cancel anytime. Payments are processed securely by Paddle.</p>
       </div>
       <PricingGrid setView={setView} />
-      <div className="text-center mt-10 text-xs" style={{ color: C.inkFaint }}>Payments are not yet processed in this demo — no charges will occur.</div>
+      <div className="text-center mt-10 text-xs" style={{ color: C.inkFaint }}>Checkout opens in a secure Paddle window. Your card details are never seen or stored by TrueCV AI.</div>
     </div>
   );
 }
