@@ -2053,6 +2053,22 @@ function AboutUs({ setView }) {
   );
 }
 
+/* ============================== PLAN GATE ============================== */
+function PlanGate({ session, setView, requiredPlans, featureName }) {
+  const planLabel = requiredPlans.length === 1 && requiredPlans[0] === "career" ? "Career Package" : "Pro or Career Package";
+  return (
+    <div className="max-w-lg mx-auto px-5 py-24 text-center">
+      <Badge tone="gold">Upgrade required</Badge>
+      <h1 className="tc-serif text-2xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>{featureName} is a {planLabel} feature</h1>
+      <p className="text-sm mb-7" style={{ color: C.inkSoft }}>Upgrade your plan to unlock {featureName.toLowerCase()} and more.</p>
+      <div className="flex gap-3 justify-center">
+        {!session && <Btn variant="outline" onClick={() => setView("signup")}>Sign up</Btn>}
+        <Btn variant="gold" onClick={() => setView("pricing")}>View plans</Btn>
+      </div>
+    </div>
+  );
+}
+
 /* ============================== APP ROOT ============================== */
 const PATH_VIEWS = {
   "/": "landing",
@@ -2070,6 +2086,7 @@ export default function TrueCVApp() {
   const [cvInput, setCvInput] = useState("");
   const [session, setSession] = useState(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
+  const [plan, setPlan] = useState("free");
 
   function setView(v) {
     setViewRaw(v);
@@ -2085,6 +2102,13 @@ export default function TrueCVApp() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  React.useEffect(() => {
+    if (!session) { setPlan("free"); return; }
+    supabase.from("profiles").select("plan").eq("id", session.user.id).single().then(({ data }) => {
+      setPlan(data?.plan || "free");
+    });
+  }, [session]);
 
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -2108,16 +2132,16 @@ export default function TrueCVApp() {
     switch (view) {
       case "analyzer": return <Analyzer setView={setView} setAnalysis={setAnalysis} setCvInput={setCvInput} session={session} />;
       case "results": return <Results analysis={analysis} setView={setView} cvInput={cvInput} />;
-      case "improve": return <ImproveCV analysis={analysis} cvInput={cvInput} setView={setView} />;
-      case "coverletter": return <CoverLetter analysis={analysis} setView={setView} />;
+      case "improve": return ["pro", "career"].includes(plan) ? <ImproveCV analysis={analysis} cvInput={cvInput} setView={setView} /> : <PlanGate session={session} setView={setView} requiredPlans={["pro", "career"]} featureName="Improve My CV" />;
+      case "coverletter": return ["pro", "career"].includes(plan) ? <CoverLetter analysis={analysis} setView={setView} /> : <PlanGate session={session} setView={setView} requiredPlans={["pro", "career"]} featureName="Cover letter generation" />;
       case "pricing": return <PricingPage setView={setView} />;
       case "login": return <AuthPage mode="login" setView={setView} />;
       case "signup": return <AuthPage mode="signup" setView={setView} />;
       case "forgot": return <ForgotPassword setView={setView} />;
       case "dashboard": return <Dashboard setView={setView} analysis={analysis} session={session} onLogout={handleLogout} />;
-      case "tracker": return <JobTracker setView={setView} />;
+      case "tracker": return plan === "career" ? <JobTracker setView={setView} /> : <PlanGate session={session} setView={setView} requiredPlans={["career"]} featureName="Job Application Tracker" />;
       case "salary": return <SalaryInsights setView={setView} />;
-      case "interview": return <InterviewPrep analysis={analysis} setView={setView} />;
+      case "interview": return plan === "career" ? <InterviewPrep analysis={analysis} setView={setView} /> : <PlanGate session={session} setView={setView} requiredPlans={["career"]} featureName="Interview Preparation" />;
       case "toolkit": return <RelocationToolkit setView={setView} />;
       case "privacy": return <PrivacyPolicy setView={setView} />;
       case "terms": return <TermsOfService setView={setView} />;
@@ -2125,7 +2149,7 @@ export default function TrueCVApp() {
       case "about": return <AboutUs setView={setView} />;
       default: return <Landing setView={setView} />;
     }
-  }, [view, analysis, cvInput, session]);
+  }, [view, analysis, cvInput, session, plan]);
 
   return (
     <div className="tc-root min-h-screen tc-scrollbar">
