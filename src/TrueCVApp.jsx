@@ -32,7 +32,6 @@ const C = {
 };
 
 const FONTS = `
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 .tc-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background: ${C.bg}; color: ${C.ink}; letter-spacing: -0.01em; }
 .tc-serif { font-family: 'Fraunces', ui-serif, Georgia, serif; letter-spacing: -0.015em; }
 .tc-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
@@ -705,7 +704,24 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
   const [lang, setLang] = useState("English");
   const [fileName, setFileName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState(0);
   const fileRef = useRef(null);
+
+  const LOADING_MESSAGES = [
+    "Reading your CV…",
+    "Comparing your experience with the job description…",
+    "Checking ATS compatibility…",
+    "Finding missing keywords…",
+    "Preparing your recommendations…",
+  ];
+
+  React.useEffect(() => {
+    if (!loading) { setLoadingStep(0); return; }
+    const id = setInterval(() => {
+      setLoadingStep((s) => (s + 1 < LOADING_MESSAGES.length ? s + 1 : s));
+    }, 1500);
+    return () => clearInterval(id);
+  }, [loading]);
 
   const canSubmit = cvText.trim().length > 20 && jdText.trim().length > 20;
 
@@ -828,7 +844,13 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
           {loading ? "Analyzing…" : "Analyze My CV"}
         </Btn>
       </Card>
-      {!canSubmit && (
+      {loading && (
+        <p className="text-sm mb-2 flex items-center gap-2" style={{ color: C.inkSoft }}>
+          <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: C.accent }} />
+          {LOADING_MESSAGES[loadingStep]}
+        </p>
+      )}
+      {!canSubmit && !loading && (
         <p className="text-xs" style={{ color: C.inkFaint }}>Add at least a short CV and job description to continue.</p>
       )}
     </div>
