@@ -697,7 +697,7 @@ function Landing({ setView }) {
 }
 
 /* ============================== ANALYZER ============================== */
-function Analyzer({ setView, setAnalysis, setCvInput }) {
+function Analyzer({ setView, setAnalysis, setCvInput, session }) {
   const [cvText, setCvText] = useState("");
   const [jdText, setJdText] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -705,7 +705,31 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
   const [fileName, setFileName] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
+  const [profile, setProfile] = useState(null);
+  const [profileChecked, setProfileChecked] = useState(false);
   const fileRef = useRef(null);
+
+  const ANON_USED_KEY = "truecv_anon_free_used";
+
+  React.useEffect(() => {
+    let cancelled = false;
+    async function loadProfile() {
+      if (session) {
+        const { data } = await supabase.from("profiles").select("plan, analyses_used").eq("id", session.user.id).single();
+        if (!cancelled) { setProfile(data || { plan: "free", analyses_used: 0 }); setProfileChecked(true); }
+      } else {
+        setProfile(null);
+        setProfileChecked(true);
+      }
+    }
+    loadProfile();
+    return () => { cancelled = true; };
+  }, [session]);
+
+  const anonUsed = !session && typeof window !== "undefined" && window.localStorage.getItem(ANON_USED_KEY) === "1";
+  const limitReached = session
+    ? profile && profile.plan === "free" && profile.analyses_used >= 1
+    : anonUsed;
 
   const LOADING_MESSAGES = [
     "Reading your CV…",
@@ -723,7 +747,7 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
     return () => clearInterval(id);
   }, [loading]);
 
-  const canSubmit = cvText.trim().length > 20 && jdText.trim().length > 20;
+  const canSubmit = cvText.trim().length > 20 && jdText.trim().length > 20 && !limitReached;
 
   function handleFile(e) {
     const f = e.target.files?.[0];
@@ -736,7 +760,20 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
     }
   }
 
+  async function recordUsage() {
+    if (session && profile) {
+      const nextCount = (profile.analyses_used || 0) + 1;
+      if (profile.plan === "free") {
+        await supabase.from("profiles").update({ analyses_used: nextCount }).eq("id", session.user.id);
+        setProfile({ ...profile, analyses_used: nextCount });
+      }
+    } else if (!session) {
+      window.localStorage.setItem(ANON_USED_KEY, "1");
+    }
+  }
+
   function runAnalysis() {
+    if (limitReached) return;
     setLoading(true);
     fetch("/api/analyze", {
       method: "POST",
@@ -754,6 +791,7 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
         setAnalysis(merged);
         setCvInput(cvText);
         setLoading(false);
+        recordUsage();
         setView("results");
       })
       .catch(() => {
@@ -762,6 +800,7 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
         setAnalysis(result);
         setCvInput(cvText);
         setLoading(false);
+        recordUsage();
         setView("results");
       });
   }
@@ -850,7 +889,19 @@ function Analyzer({ setView, setAnalysis, setCvInput }) {
           {LOADING_MESSAGES[loadingStep]}
         </p>
       )}
-      {!canSubmit && !loading && (
+      {limitReached && (
+        <Card className="p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ borderColor: C.gold }}>
+          <div>
+            <div className="text-sm font-semibold mb-1" style={{ color: C.ink }}>You've used your free analysis</div>
+            <p className="text-sm" style={{ color: C.inkSoft }}>Upgrade to Pro for unlimited CV analyses, tailored cover letters, and more.</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            {!session && <Btn variant="outline" onClick={() => setView("signup")}>Sign up</Btn>}
+            <Btn variant="gold" onClick={() => setView("pricing")}>Upgrade to Pro</Btn>
+          </div>
+        </Card>
+      )}
+      {!canSubmit && !loading && !limitReached && (
         <p className="text-xs" style={{ color: C.inkFaint }}>Add at least a short CV and job description to continue.</p>
       )}
     </div>
@@ -2055,7 +2106,7 @@ export default function TrueCVApp() {
 
   const page = useMemo(() => {
     switch (view) {
-      case "analyzer": return <Analyzer setView={setView} setAnalysis={setAnalysis} setCvInput={setCvInput} />;
+      case "analyzer": return <Analyzer setView={setView} setAnalysis={setAnalysis} setCvInput={setCvInput} session={session} />;
       case "results": return <Results analysis={analysis} setView={setView} cvInput={cvInput} />;
       case "improve": return <ImproveCV analysis={analysis} cvInput={cvInput} setView={setView} />;
       case "coverletter": return <CoverLetter analysis={analysis} setView={setView} />;
