@@ -2095,6 +2095,23 @@ export default function TrueCVApp() {
     window.scrollTo(0, 0);
   }
 
+  const PAGE_META = {
+    landing: { title: "TrueCV AI — AI CV Checker & Resume Optimizer for ATS", desc: "Upload your CV, paste any job description, and get an instant ATS compatibility score, missing keywords, and an AI-improved CV and cover letter. Free to start." },
+    pricing: { title: "Pricing — TrueCV AI", desc: "Simple, transparent pricing for AI-powered CV analysis. Free to start, Pro from $9.99/mo, Career Package from $19.99/mo." },
+    terms: { title: "Terms of Service — TrueCV AI", desc: "Read the terms of service for using TrueCV AI's CV analysis and career tools." },
+    privacy: { title: "Privacy Policy — TrueCV AI", desc: "Learn how TrueCV AI collects, uses, and protects your data." },
+    refund: { title: "Refund Policy — TrueCV AI", desc: "TrueCV AI's 14-day money-back guarantee and refund process for Pro and Career Package subscriptions." },
+    about: { title: "About Us — TrueCV AI", desc: "Learn why TrueCV AI was built to help international job seekers optimize their CV for ATS systems and human recruiters." },
+    analyzer: { title: "Analyze Your CV — TrueCV AI", desc: "Get an instant AI-powered ATS compatibility score for your CV against any job description." },
+  };
+
+  React.useEffect(() => {
+    const meta = PAGE_META[view] || PAGE_META.landing;
+    document.title = meta.title;
+    const descTag = document.querySelector('meta[name="description"]');
+    if (descTag) descTag.setAttribute("content", meta.desc);
+  }, [view]);
+
   React.useEffect(() => {
     function onPopState() {
       setViewRaw(PATH_VIEWS[window.location.pathname] || "landing");
