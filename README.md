@@ -32,3 +32,4 @@
 - `index.html` (meta tags)
 - `public/robots.txt`
 - `public/sitemap.xml`
+Updated: testing deployment sync.
