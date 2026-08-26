@@ -186,6 +186,22 @@ function Card({ children, className = "", style = {} }) {
 }
 
 /* ============================== NAV ============================== */
+function LogoMark({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <defs>
+        <linearGradient id="tcLogoGrad" x1="0" y1="0" x2="32" y2="32">
+          <stop stopColor={C.navySoft} />
+          <stop offset="1" stopColor={C.navy} />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#tcLogoGrad)" />
+      <path d="M10.5 8.5h7.2l3.8 3.8v11.2a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z" fill="#ffffff" fillOpacity="0.14" stroke="#ffffff" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M12.3 16.2l2.6 2.6 5.2-5.7" stroke={C.gold} strokeWidth="1.9" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function Nav({ view, setView }) {
   const [open, setOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -205,9 +221,7 @@ function Nav({ view, setView }) {
     <header style={{ borderBottom: `1px solid ${C.line}`, background: "rgba(251,252,254,0.9)", backdropFilter: "blur(8px)" }} className="sticky top-0 z-40">
       <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
         <button onClick={() => setView("landing")} className="flex items-center gap-2">
-          <div style={{ background: C.navy }} className="w-8 h-8 rounded-lg flex items-center justify-center">
-            <FileText size={16} color="#fff" strokeWidth={2.5} />
-          </div>
+          <LogoMark size={32} />
           <span className="tc-serif font-semibold text-lg" style={{ color: C.ink }}>TrueCV <span style={{ color: C.accent }}>AI</span></span>
         </button>
 
@@ -312,7 +326,10 @@ function Footer({ setView }) {
     <footer style={{ background: C.navy, color: "#C7D0E0" }} className="mt-24">
       <div className="max-w-6xl mx-auto px-5 sm:px-8 py-14 grid grid-cols-2 md:grid-cols-4 gap-8">
         <div className="col-span-2 md:col-span-1">
-          <span className="tc-serif font-semibold text-lg text-white">TrueCV AI</span>
+          <div className="flex items-center gap-2 mb-1">
+            <LogoMark size={26} />
+            <span className="tc-serif font-semibold text-lg text-white">TrueCV AI</span>
+          </div>
           <p className="text-sm mt-3 leading-relaxed" style={{ color: "#8FA0C2" }}>Make your CV job-ready — tailored to every application.</p>
         </div>
         {[
