@@ -9,29 +9,32 @@ import {
 
 /* ============================== TOKENS ============================== */
 const C = {
-  bg: "#FBFCFE",
+  bg: "#FAFAF8",
   surface: "#FFFFFF",
-  ink: "#101826",
-  inkSoft: "#4C5568",
-  inkFaint: "#8891A3",
-  accent: "#2E5AAC",
-  accentDeep: "#1F4283",
-  accentSoft: "#EAF1FF",
-  line: "#E3E8F1",
-  navy: "#0B1830",
-  navySoft: "#16233F",
-  success: "#0F9960",
-  successBg: "#E8F8EF",
-  warning: "#B4740E",
-  warningBg: "#FDF3E0",
-  danger: "#C23934",
-  dangerBg: "#FCEAE9",
+  ink: "#14171F",
+  inkSoft: "#4A4F5C",
+  inkFaint: "#8A8F9C",
+  accent: "#1F3B73",
+  accentDeep: "#142850",
+  accentSoft: "#EEF2FA",
+  gold: "#B9924A",
+  goldDeep: "#8F6F30",
+  goldSoft: "#FBF3E3",
+  line: "#E7E5DF",
+  navy: "#0A1226",
+  navySoft: "#141F3B",
+  success: "#0E7C4E",
+  successBg: "#E7F5EC",
+  warning: "#A66B0E",
+  warningBg: "#FBF1DE",
+  danger: "#B23428",
+  dangerBg: "#FBEAE8",
 };
 
 const FONTS = `
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-.tc-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background: ${C.bg}; color: ${C.ink}; }
-.tc-serif { font-family: 'Fraunces', ui-serif, Georgia, serif; }
+.tc-root { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; background: ${C.bg}; color: ${C.ink}; letter-spacing: -0.01em; }
+.tc-serif { font-family: 'Fraunces', ui-serif, Georgia, serif; letter-spacing: -0.015em; }
 .tc-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
 @keyframes tc-scan { 0% { transform: translateY(0); opacity: 0; } 8% { opacity: 1; } 92% { opacity: 1; } 100% { transform: translateY(220px); opacity: 0; } }
 @keyframes tc-fadeup { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -47,7 +50,9 @@ const FONTS = `
 .tc-insert { background: ${C.successBg}; color: ${C.success}; padding: 0 4px; border-radius: 3px; }
 .tc-scrollbar::-webkit-scrollbar { width: 6px; }
 .tc-scrollbar::-webkit-scrollbar-thumb { background: ${C.line}; border-radius: 4px; }
-input:focus, textarea:focus, button:focus-visible, select:focus { outline: 2px solid ${C.accent}; outline-offset: 2px; }
+input:focus, textarea:focus, button:focus-visible, select:focus { outline: 2px solid ${C.gold}; outline-offset: 2px; }
+.tc-card-shadow { box-shadow: 0 1px 2px rgba(20,23,31,0.04), 0 8px 24px -8px rgba(20,23,31,0.08); }
+.tc-hero-glow { background: radial-gradient(ellipse 80% 60% at 50% -10%, ${C.goldSoft}, transparent); }
 `;
 
 /* ============================== MOCK ENGINE ============================== */
@@ -129,10 +134,11 @@ function buildImprovedCV(cvText, analysis) {
 /* ============================== SMALL UI PRIMITIVES ============================== */
 function Btn({ children, variant = "primary", size = "md", onClick, icon: Icon, className = "", type = "button", disabled }) {
   const sizes = { sm: "text-sm px-3.5 py-2", md: "text-sm px-5 py-2.5", lg: "text-base px-7 py-3.5" };
-  const base = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed";
+  const base = "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed";
   const styles = {
-    primary: { background: C.accent, color: "#fff" },
-    dark: { background: C.navy, color: "#fff" },
+    primary: { background: `linear-gradient(180deg, ${C.accent}, ${C.accentDeep})`, color: "#fff", boxShadow: "0 1px 2px rgba(20,40,80,0.15), 0 6px 16px -6px rgba(20,40,80,0.45)" },
+    dark: { background: `linear-gradient(180deg, ${C.navySoft}, ${C.navy})`, color: "#fff", boxShadow: "0 1px 2px rgba(10,18,38,0.2), 0 6px 16px -6px rgba(10,18,38,0.5)" },
+    gold: { background: `linear-gradient(180deg, #C9A45E, ${C.gold})`, color: "#1A1206", boxShadow: "0 1px 2px rgba(143,111,48,0.2), 0 6px 16px -6px rgba(143,111,48,0.5)" },
     outline: { background: "transparent", color: C.ink, border: `1.5px solid ${C.line}` },
     ghost: { background: "transparent", color: C.inkSoft },
   };
@@ -142,7 +148,7 @@ function Btn({ children, variant = "primary", size = "md", onClick, icon: Icon, 
       disabled={disabled}
       onClick={onClick}
       style={styles[variant]}
-      className={`${base} ${sizes[size]} hover:brightness-110 active:scale-[0.98] ${className}`}
+      className={`${base} ${sizes[size]} hover:brightness-105 active:scale-[0.98] ${className}`}
     >
       {Icon && <Icon size={16} strokeWidth={2.25} />}
       {children}
@@ -156,11 +162,12 @@ function Badge({ tone = "neutral", children }) {
     good: { bg: C.successBg, color: C.success },
     warn: { bg: C.warningBg, color: C.warning },
     bad: { bg: C.dangerBg, color: C.danger },
+    gold: { bg: C.goldSoft, color: C.goldDeep },
   };
   const t = tones[tone];
   return (
     <span
-      style={{ background: t.bg, color: t.color }}
+      style={{ background: t.bg, color: t.color, letterSpacing: "0.01em" }}
       className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold"
     >
       {children}
@@ -172,7 +179,7 @@ function Card({ children, className = "", style = {} }) {
   return (
     <div
       style={{ background: C.surface, border: `1px solid ${C.line}`, ...style }}
-      className={`rounded-2xl shadow-sm ${className}`}
+      className={`rounded-2xl tc-card-shadow ${className}`}
     >
       {children}
     </div>
@@ -527,7 +534,7 @@ function Landing({ setView }) {
   return (
     <div>
       {/* HERO */}
-      <section className="max-w-6xl mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-16 grid lg:grid-cols-2 gap-12 items-center">
+      <section className="tc-hero-glow max-w-6xl mx-auto px-5 sm:px-8 pt-14 sm:pt-20 pb-16 grid lg:grid-cols-2 gap-12 items-center">
         <div className="tc-fadeup">
           <Badge>For job seekers worldwide</Badge>
           <h1 className="tc-serif mt-5 text-4xl sm:text-5xl font-semibold leading-[1.08]" style={{ color: C.ink }}>
@@ -1191,8 +1198,8 @@ function PricingGrid({ compact, setView }) {
   return (
     <div className="grid md:grid-cols-3 gap-5">
       {plans.map((p) => (
-        <Card key={p.name} className={`p-6 relative ${p.highlight ? "md:-translate-y-2" : ""}`} style={p.highlight ? { borderColor: C.accent, borderWidth: 2 } : {}}>
-          {p.highlight && <div className="absolute -top-3 left-6"><Badge>Most popular</Badge></div>}
+        <Card key={p.name} className={`p-6 relative ${p.highlight ? "md:-translate-y-2" : ""}`} style={p.highlight ? { borderColor: C.gold, borderWidth: 2 } : {}}>
+          {p.highlight && <div className="absolute -top-3 left-6"><Badge tone="gold">Most popular</Badge></div>}
           <div className="font-semibold text-sm mb-2" style={{ color: C.inkSoft }}>{p.name}</div>
           <div className="flex items-baseline gap-1 mb-5">
             <span className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>{p.price}</span>
