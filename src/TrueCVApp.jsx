@@ -207,6 +207,7 @@ function Nav({ view, setView }) {
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolLinks = [
     { id: "analyzer", label: "Analyze CV", desc: "Score your CV against a job description" },
+    { id: "jobs", label: "Find Jobs", desc: "Browse real, current job openings" },
     { id: "tracker", label: "Job Tracker", desc: "Track applications, interviews, offers" },
     { id: "salary", label: "Salary Insights", desc: "Estimate a fair salary range" },
     { id: "interview", label: "Interview Prep", desc: "Practice likely interview questions" },
@@ -281,6 +282,7 @@ function Nav({ view, setView }) {
           <div className="text-xs font-semibold uppercase tracking-wide mt-4 mb-1" style={{ color: C.inkFaint }}>Tools</div>
           {[
             { id: "analyzer", label: "Analyze CV" },
+            { id: "jobs", label: "Find Jobs" },
             { id: "tracker", label: "Job Tracker" },
             { id: "salary", label: "Salary Insights" },
             { id: "interview", label: "Interview Prep" },
@@ -1917,6 +1919,83 @@ function findCountryNotes(country) {
   return [];
 }
 
+/* ============================== JOB SEARCH ============================== */
+function JobSearch({ setView }) {
+  const [query, setQuery] = useState("");
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
+  function search() {
+    setLoading(true);
+    setSearched(true);
+    fetch(`/api/jobs${query ? `?q=${encodeURIComponent(query)}` : ""}`)
+      .then((r) => r.json())
+      .then((data) => setJobs(data.jobs || []))
+      .catch(() => setJobs([]))
+      .finally(() => setLoading(false));
+  }
+
+  React.useEffect(() => {
+    search();
+  }, []);
+
+  return (
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-12">
+      <Badge>Real listings, updated live</Badge>
+      <h1 className="tc-serif text-3xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>Find Jobs</h1>
+      <p className="text-sm mb-8 max-w-lg" style={{ color: C.inkSoft }}>Browse real, current job openings — then use TrueCV AI to tailor your CV to any listing before you apply.</p>
+
+      <Card className="p-4 mb-6 flex gap-2">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && search()}
+          placeholder="Search job title, company, or skill…"
+          style={{ borderColor: C.line }}
+          className="flex-1 rounded-lg border p-2.5 text-sm"
+        />
+        <Btn onClick={search}>Search</Btn>
+      </Card>
+
+      {loading && <p className="text-sm text-center py-10" style={{ color: C.inkSoft }}>Loading listings…</p>}
+
+      {!loading && searched && jobs.length === 0 && (
+        <Card className="p-8 text-center">
+          <p className="text-sm" style={{ color: C.inkSoft }}>No listings found for that search. Try a broader term.</p>
+        </Card>
+      )}
+
+      {!loading && jobs.length > 0 && (
+        <div className="space-y-3">
+          {jobs.map((j, i) => (
+            <Card key={i} className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-sm" style={{ color: C.ink }}>{j.title}</div>
+                  <div className="text-xs mt-0.5" style={{ color: C.inkFaint }}>{j.company}{j.location ? ` · ${j.location}` : ""} · via {j.source}</div>
+                  {j.tags?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {j.tags.slice(0, 5).map((t) => <Badge key={t} tone="neutral">{t}</Badge>)}
+                    </div>
+                  )}
+                </div>
+                <a href={j.url} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                  <Btn size="sm" variant="outline" icon={ArrowRight}>Apply</Btn>
+                </a>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-8 text-center">
+        <Btn variant="outline" onClick={() => setView("analyzer")}>Tailor your CV to a job</Btn>
+      </div>
+    </div>
+  );
+}
+
 function RelocationToolkit({ setView }) {
   const [country, setCountry] = useState("");
   const [checked, setChecked] = useState({});
@@ -2178,6 +2257,7 @@ export default function TrueCVApp() {
       case "salary": return <SalaryInsights setView={setView} />;
       case "interview": return plan === "career" ? <InterviewPrep analysis={analysis} setView={setView} /> : <PlanGate session={session} setView={setView} requiredPlans={["career"]} featureName="Interview Preparation" />;
       case "toolkit": return <RelocationToolkit setView={setView} />;
+      case "jobs": return <JobSearch setView={setView} />;
       case "privacy": return <PrivacyPolicy setView={setView} />;
       case "terms": return <TermsOfService setView={setView} />;
       case "refund": return <RefundPolicy setView={setView} />;
