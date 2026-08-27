@@ -50,6 +50,15 @@ const FONTS = `
 .tc-scrollbar::-webkit-scrollbar { width: 6px; }
 .tc-scrollbar::-webkit-scrollbar-thumb { background: ${C.line}; border-radius: 4px; }
 input:focus, textarea:focus, button:focus-visible, select:focus { outline: 2px solid ${C.gold}; outline-offset: 2px; }
+html { scroll-behavior: smooth; }
+.tc-reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.16,1,.3,1); }
+.tc-reveal.tc-revealed { opacity: 1; transform: translateY(0); }
+.tc-lift { transition: transform .25s ease, box-shadow .25s ease; }
+.tc-lift:hover { transform: translateY(-3px); box-shadow: 0 4px 8px rgba(20,23,31,0.06), 0 16px 32px -12px rgba(20,23,31,0.14); }
+@media (prefers-reduced-motion: reduce) {
+  .tc-reveal { opacity: 1; transform: none; transition: none; }
+  html { scroll-behavior: auto; }
+}
 .tc-card-shadow { box-shadow: 0 1px 2px rgba(20,23,31,0.04), 0 8px 24px -8px rgba(20,23,31,0.08); }
 .tc-hero-glow { background: radial-gradient(ellipse 80% 60% at 50% -10%, ${C.goldSoft}, transparent); }
 `;
@@ -180,6 +189,33 @@ function Card({ children, className = "", style = {} }) {
       style={{ background: C.surface, border: `1px solid ${C.line}`, ...style }}
       className={`rounded-2xl tc-card-shadow ${className}`}
     >
+      {children}
+    </div>
+  );
+}
+
+function Reveal({ children, className = "", delay = 0 }) {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.12 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`tc-reveal ${visible ? "tc-revealed" : ""} ${className}`}>
       {children}
     </div>
   );
@@ -609,6 +645,7 @@ function Landing({ setView }) {
       </section>
 
       {/* HOW IT WORKS */}
+      <Reveal>
       <section id="how-it-works" className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
         <div className="mb-10">
           <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>How it works</div>
@@ -617,7 +654,7 @@ function Landing({ setView }) {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {steps.map((s, i) => (
             <div key={s.title} className="relative">
-              <Card className="p-5 h-full">
+              <Card className="p-5 h-full tc-lift">
                 <div style={{ background: C.accentSoft, color: C.accent }} className="w-10 h-10 rounded-xl flex items-center justify-center mb-4">
                   <s.icon size={18} strokeWidth={2.25} />
                 </div>
@@ -629,8 +666,10 @@ function Landing({ setView }) {
           ))}
         </div>
       </section>
+      </Reveal>
 
       {/* EXAMPLE */}
+      <Reveal>
       <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
         <div className="mb-8">
           <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>See it in action</div>
@@ -638,8 +677,10 @@ function Landing({ setView }) {
         </div>
         <ScoreExample />
       </section>
+      </Reveal>
 
       {/* BEFORE / AFTER */}
+      <Reveal>
       <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
         <div className="flex items-center justify-between mb-8 gap-3">
           <div>
@@ -650,15 +691,17 @@ function Landing({ setView }) {
         </div>
         <BeforeAfterExamples />
       </section>
+      </Reveal>
 
       {/* FEATURES */}
+      <Reveal>
       <section style={{ background: C.navy }} className="py-16 mt-8">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: "#8FB3FF" }}>Why TrueCV AI</div>
           <h2 className="tc-serif text-3xl font-semibold text-white mb-10">Built to be honest, not just optimistic</h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {features.map((f) => (
-              <div key={f.title} style={{ background: C.navySoft, border: "1px solid #22304F" }} className="rounded-2xl p-5">
+              <div key={f.title} style={{ background: C.navySoft, border: "1px solid #22304F" }} className="rounded-2xl p-5 tc-lift">
                 <div style={{ background: "#1F3357", color: "#8FB3FF" }} className="w-10 h-10 rounded-xl flex items-center justify-center mb-4">
                   <f.icon size={18} strokeWidth={2.25} />
                 </div>
@@ -669,8 +712,10 @@ function Landing({ setView }) {
           </div>
         </div>
       </section>
+      </Reveal>
 
       {/* PRICING TEASER */}
+      <Reveal>
       <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
         <div className="text-center max-w-lg mx-auto mb-10">
           <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>Pricing</div>
@@ -678,8 +723,10 @@ function Landing({ setView }) {
         </div>
         <PricingGrid compact setView={setView} />
       </section>
+      </Reveal>
 
       {/* FAQ */}
+      <Reveal>
       <section className="max-w-3xl mx-auto px-5 sm:px-8 py-16">
         <div className="mb-8 text-center">
           <div className="text-xs font-semibold tracking-wide uppercase mb-2" style={{ color: C.accent }}>FAQ</div>
@@ -697,8 +744,10 @@ function Landing({ setView }) {
           ))}
         </div>
       </section>
+      </Reveal>
 
       {/* TESTIMONIALS */}
+      <Reveal>
       <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
         <div className="flex items-center justify-between mb-8">
           <h2 className="tc-serif text-3xl font-semibold" style={{ color: C.ink }}>What early users say</h2>
@@ -710,7 +759,7 @@ function Landing({ setView }) {
             ["\"The cover letter draft saved me an hour and actually matched the job posting.\"", "Sarra M., Hotel Operations"],
             ["\"Clear, specific recommendations — not generic tips I'd already read elsewhere.\"", "Omar T., Business Analyst"],
           ].map(([quote, name]) => (
-            <Card key={name} className="p-5">
+            <Card key={name} className="p-5 tc-lift">
               <div className="flex gap-0.5 mb-3">{Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} fill={C.warning} color={C.warning} />)}</div>
               <p className="text-sm leading-relaxed mb-4" style={{ color: C.inkSoft }}>{quote}</p>
               <div className="text-xs font-semibold" style={{ color: C.ink }}>{name}</div>
@@ -719,8 +768,10 @@ function Landing({ setView }) {
           ))}
         </div>
       </section>
+      </Reveal>
 
       {/* FINAL CTA */}
+      <Reveal>
       <section className="max-w-6xl mx-auto px-5 sm:px-8 pb-20">
         <div style={{ background: `linear-gradient(135deg, ${C.navy}, ${C.accentDeep})` }} className="rounded-3xl px-8 py-14 text-center">
           <h2 className="tc-serif text-3xl sm:text-4xl font-semibold text-white mb-3">Ready to make your CV job-ready?</h2>
@@ -728,6 +779,7 @@ function Landing({ setView }) {
           <Btn size="lg" onClick={() => setView("analyzer")} icon={Sparkles}>Analyze My CV</Btn>
         </div>
       </section>
+      </Reveal>
     </div>
   );
 }
