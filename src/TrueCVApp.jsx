@@ -207,7 +207,6 @@ function Nav({ view, setView }) {
   const [toolsOpen, setToolsOpen] = useState(false);
   const toolLinks = [
     { id: "analyzer", label: "Analyze CV", desc: "Score your CV against a job description" },
-    { id: "jobs", label: "Find Jobs", desc: "Browse real, current job openings" },
     { id: "tracker", label: "Job Tracker", desc: "Track applications, interviews, offers" },
     { id: "salary", label: "Salary Insights", desc: "Estimate a fair salary range" },
     { id: "interview", label: "Interview Prep", desc: "Practice likely interview questions" },
@@ -233,6 +232,14 @@ function Nav({ view, setView }) {
             className="px-3.5 py-2 rounded-full text-sm font-medium transition-colors"
           >
             Home
+          </button>
+
+          <button
+            onClick={() => setView("jobs")}
+            style={{ color: view === "jobs" ? C.ink : C.inkSoft, background: view === "jobs" ? C.accentSoft : "transparent" }}
+            className="px-3.5 py-2 rounded-full text-sm font-medium transition-colors"
+          >
+            Find Jobs
           </button>
 
           <div onMouseEnter={() => setToolsOpen(true)} onMouseLeave={() => setToolsOpen(false)} className="relative">
