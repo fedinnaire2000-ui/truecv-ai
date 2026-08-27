@@ -570,6 +570,7 @@ function Landing({ setView }) {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Btn size="lg" icon={Sparkles} onClick={() => setView("analyzer")}>Analyze My CV</Btn>
+            <Btn size="lg" variant="gold" icon={Briefcase} onClick={() => setView("jobs")}>Find Jobs</Btn>
             <Btn size="lg" variant="outline" onClick={() => document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })}>See How It Works</Btn>
           </div>
           <div className="mt-8 flex items-center gap-5 text-xs" style={{ color: C.inkFaint }}>
