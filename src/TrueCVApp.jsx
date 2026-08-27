@@ -2066,6 +2066,7 @@ function AboutUs({ setView }) {
       <p>TrueCV AI was built to help job seekers — especially those applying across borders, from the MENA region to the Gulf, Europe, and beyond — put their best CV forward.</p>
       <p>Job hunting internationally comes with extra friction: ATS systems that filter CVs before a human ever sees them, unfamiliar formatting expectations, and confusing relocation paperwork. TrueCV AI brings CV analysis, cover letter generation, salary insights, interview preparation, and a relocation checklist together in one place, so you don't have to piece together advice from a dozen different sources.</p>
       <p>We're just getting started, and we're building this in the open — improving it step by step based on real feedback from people actually applying for jobs. If you have suggestions or run into an issue, reach out any time via WhatsApp using the button on this site.</p>
+      <p className="pt-2" style={{ color: C.inkFaint }}>TrueCV AI was founded by Fedi Laaouini.</p>
     </StaticPage>
   );
 }
