@@ -242,6 +242,14 @@ function Nav({ view, setView }) {
             Find Jobs
           </button>
 
+          <button
+            onClick={() => setView("postjob")}
+            style={{ color: view === "postjob" ? C.ink : C.inkSoft, background: view === "postjob" ? C.accentSoft : "transparent" }}
+            className="px-3.5 py-2 rounded-full text-sm font-medium transition-colors"
+          >
+            Post a Job
+          </button>
+
           <div onMouseEnter={() => setToolsOpen(true)} onMouseLeave={() => setToolsOpen(false)} className="relative">
             <button
               onClick={() => setToolsOpen(!toolsOpen)}
@@ -290,6 +298,7 @@ function Nav({ view, setView }) {
           {[
             { id: "analyzer", label: "Analyze CV" },
             { id: "jobs", label: "Find Jobs" },
+            { id: "postjob", label: "Post a Job" },
             { id: "tracker", label: "Job Tracker" },
             { id: "salary", label: "Salary Insights" },
             { id: "interview", label: "Interview Prep" },
