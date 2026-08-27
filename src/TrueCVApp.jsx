@@ -1928,19 +1928,31 @@ function findCountryNotes(country) {
 }
 
 /* ============================== JOB SEARCH ============================== */
-function JobSearch({ setView }) {
+function JobSearch({ setView, session }) {
   const [query, setQuery] = useState("");
   const [jobs, setJobs] = useState([]);
+  const [internalJobs, setInternalJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
   function search() {
     setLoading(true);
     setSearched(true);
-    fetch(`/api/jobs${query ? `?q=${encodeURIComponent(query)}` : ""}`)
-      .then((r) => r.json())
-      .then((data) => setJobs(data.jobs || []))
-      .catch(() => setJobs([]))
+    Promise.all([
+      fetch(`/api/jobs${query ? `?q=${encodeURIComponent(query)}` : ""}`).then((r) => r.json()).catch(() => ({ jobs: [] })),
+      supabase.from("job_postings").select("*").eq("status", "approved").order("created_at", { ascending: false }),
+    ])
+      .then(([externalData, internalRes]) => {
+        setJobs(externalData.jobs || []);
+        let internal = internalRes.data || [];
+        if (query) {
+          const q = query.toLowerCase();
+          internal = internal.filter(
+            (j) => j.title?.toLowerCase().includes(q) || j.company?.toLowerCase().includes(q) || j.description?.toLowerCase().includes(q)
+          );
+        }
+        setInternalJobs(internal);
+      })
       .finally(() => setLoading(false));
   }
 
@@ -1948,9 +1960,14 @@ function JobSearch({ setView }) {
     search();
   }, []);
 
+  const totalCount = jobs.length + internalJobs.length;
+
   return (
     <div className="max-w-4xl mx-auto px-5 sm:px-8 py-12">
-      <Badge>Real listings, updated live</Badge>
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <Badge>Real listings, updated live</Badge>
+        <Btn variant="gold" size="sm" onClick={() => setView(session ? "postjob" : "login")}>Post a Job</Btn>
+      </div>
       <h1 className="tc-serif text-3xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>Find Jobs</h1>
       <p className="text-sm mb-8 max-w-lg" style={{ color: C.inkSoft }}>Browse real, current job openings — then use TrueCV AI to tailor your CV to any listing before you apply.</p>
 
@@ -1968,14 +1985,31 @@ function JobSearch({ setView }) {
 
       {loading && <p className="text-sm text-center py-10" style={{ color: C.inkSoft }}>Loading listings…</p>}
 
-      {!loading && searched && jobs.length === 0 && (
+      {!loading && searched && totalCount === 0 && (
         <Card className="p-8 text-center">
           <p className="text-sm" style={{ color: C.inkSoft }}>No listings found for that search. Try a broader term.</p>
         </Card>
       )}
 
-      {!loading && jobs.length > 0 && (
+      {!loading && totalCount > 0 && (
         <div className="space-y-3">
+          {internalJobs.map((j) => (
+            <Card key={`internal-${j.id}`} className="p-4" style={{ borderColor: C.gold }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <div className="font-semibold text-sm" style={{ color: C.ink }}>{j.title}</div>
+                    <Badge tone="gold">Direct</Badge>
+                  </div>
+                  <div className="text-xs mt-0.5" style={{ color: C.inkFaint }}>{j.company}{j.location ? ` · ${j.location}` : ""}{j.remote ? " · Remote" : ""}</div>
+                  <p className="text-xs mt-2 line-clamp-2" style={{ color: C.inkSoft }}>{j.description}</p>
+                </div>
+                <a href={j.apply_url || `mailto:${j.apply_email}`} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                  <Btn size="sm" variant="outline" icon={ArrowRight}>Apply</Btn>
+                </a>
+              </div>
+            </Card>
+          ))}
           {jobs.map((j, i) => (
             <Card key={i} className="p-4">
               <div className="flex items-start justify-between gap-3">
@@ -2000,6 +2034,105 @@ function JobSearch({ setView }) {
       <div className="mt-8 text-center">
         <Btn variant="outline" onClick={() => setView("analyzer")}>Tailor your CV to a job</Btn>
       </div>
+    </div>
+  );
+}
+
+function PostJob({ setView, session }) {
+  const [form, setForm] = useState({ title: "", company: "", location: "", remote: false, description: "", apply_url: "", apply_email: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!session) {
+    return (
+      <div className="max-w-lg mx-auto px-5 py-24 text-center">
+        <h1 className="tc-serif text-2xl font-semibold mb-2" style={{ color: C.ink }}>Sign in to post a job</h1>
+        <p className="text-sm mb-6" style={{ color: C.inkSoft }}>You'll need an account to submit and manage your job posting.</p>
+        <Btn onClick={() => setView("login")}>Log in or sign up</Btn>
+      </div>
+    );
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    if (!form.apply_url.trim() && !form.apply_email.trim()) {
+      setError("Please provide either an application URL or an application email.");
+      return;
+    }
+    setSubmitting(true);
+    const { error: err } = await supabase.from("job_postings").insert({
+      employer_id: session.user.id,
+      title: form.title,
+      company: form.company,
+      location: form.location,
+      remote: form.remote,
+      description: form.description,
+      apply_url: form.apply_url || null,
+      apply_email: form.apply_email || null,
+    });
+    setSubmitting(false);
+    if (err) { setError(err.message); return; }
+    setSubmitted(true);
+  }
+
+  if (submitted) {
+    return (
+      <div className="max-w-lg mx-auto px-5 py-24 text-center">
+        <Badge tone="good">Submitted</Badge>
+        <h1 className="tc-serif text-2xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>Your job posting is under review</h1>
+        <p className="text-sm mb-6" style={{ color: C.inkSoft }}>We manually review every posting before it goes live to keep listings genuine. This usually takes a short while.</p>
+        <Btn variant="outline" onClick={() => setView("jobs")}>Back to Find Jobs</Btn>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-5 sm:px-8 py-12">
+      <Badge>For employers</Badge>
+      <h1 className="tc-serif text-3xl font-semibold mt-4 mb-2" style={{ color: C.ink }}>Post a Job</h1>
+      <p className="text-sm mb-8 max-w-lg" style={{ color: C.inkSoft }}>Reach job seekers actively improving their CVs and applying internationally. Listings are reviewed before publishing.</p>
+
+      {error && <div style={{ background: C.dangerBg, color: C.danger }} className="rounded-lg p-3 text-sm mb-4">{error}</div>}
+
+      <Card className="p-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Job title</label>
+            <input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Front Desk Supervisor" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Company</label>
+              <input required value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} placeholder="Company name" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Location</label>
+              <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Doha, Qatar" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+            </div>
+          </div>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={form.remote} onChange={(e) => setForm({ ...form, remote: e.target.checked })} className="w-4 h-4" />
+            <span className="text-sm" style={{ color: C.inkSoft }}>This is a remote position</span>
+          </label>
+          <div>
+            <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Job description</label>
+            <textarea required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={5} placeholder="Responsibilities, requirements, benefits…" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Application URL</label>
+              <input value={form.apply_url} onChange={(e) => setForm({ ...form, apply_url: e.target.value })} placeholder="https://…" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-semibold block mb-1.5" style={{ color: C.inkFaint }}>Or application email</label>
+              <input value={form.apply_email} onChange={(e) => setForm({ ...form, apply_email: e.target.value })} placeholder="jobs@company.com" style={{ borderColor: C.line }} className="w-full rounded-lg border p-2.5 text-sm" />
+            </div>
+          </div>
+          <Btn type="submit" disabled={submitting} className="w-full" size="lg">{submitting ? "Submitting…" : "Submit for review"}</Btn>
+        </form>
+      </Card>
     </div>
   );
 }
@@ -2265,7 +2398,8 @@ export default function TrueCVApp() {
       case "salary": return <SalaryInsights setView={setView} />;
       case "interview": return plan === "career" ? <InterviewPrep analysis={analysis} setView={setView} /> : <PlanGate session={session} setView={setView} requiredPlans={["career"]} featureName="Interview Preparation" />;
       case "toolkit": return <RelocationToolkit setView={setView} />;
-      case "jobs": return <JobSearch setView={setView} />;
+      case "jobs": return <JobSearch setView={setView} session={session} />;
+      case "postjob": return <PostJob setView={setView} session={session} />;
       case "privacy": return <PrivacyPolicy setView={setView} />;
       case "terms": return <TermsOfService setView={setView} />;
       case "refund": return <RefundPolicy setView={setView} />;
